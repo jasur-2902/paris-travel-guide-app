@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fix Leaflet container inside rounded parent */
+.leaflet-container {
+  font-family: inherit;
+}
