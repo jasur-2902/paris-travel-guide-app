@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, MapPin, X, Loader2, LocateFixed, AlertCircle, CheckCircle2, Table, CalendarDays, Map, Plus, Eye, EyeOff, Sun as SunIcon, Moon, Globe, Cloud, CloudSun, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog, ChevronDown, Settings, ToggleLeft, ToggleRight, ClipboardCopy } from 'lucide-react';
+import { Download, MapPin, X, Loader2, LocateFixed, AlertCircle, CheckCircle2, Table, CalendarDays, Map, Plus, Eye, EyeOff, Sun as SunIcon, Moon, Globe, Cloud, CloudSun, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog, ChevronDown, Settings, ToggleLeft, ToggleRight, ClipboardCopy, HelpCircle } from 'lucide-react';
 import { STORAGE_KEY, initialData, isInFrance, formatAddress, getWeatherInfo, estimateHybridTransit } from './utils';
 import { useLanguage, SUPPORTED_LANGUAGES } from './i18n';
 import TableView from './TableView';
@@ -9,6 +9,7 @@ import BudgetTracker from './BudgetTracker';
 import TripStats from './TripStats';
 import TripTips from './TripTips';
 import AddActivityModal from './AddActivityModal';
+import Tutorial from './Tutorial';
 
 function loadSavedData() {
   try {
@@ -119,7 +120,7 @@ function WeatherPill({ weather, locale, t, onDayClick }) {
   const PillIcon = WEATHER_ICONS[topIcon] || Cloud;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} data-tutorial="weather-pill" className="relative">
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 h-8 px-3 text-xs rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors"
@@ -209,6 +210,8 @@ export default function App() {
   const [showHidden, setShowHidden] = useState(false);
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const prevViewModeRef = useRef(null);
   const dropdownRef = useRef(null);
   const settingsRef = useRef(null);
   const notificationTimer = useRef(null);
@@ -218,6 +221,30 @@ export default function App() {
 
   const hiddenCount = items.filter(i => i.hidden).length;
   const isSimple = viewMode === 'simple';
+
+  const startTutorial = useCallback(() => {
+    prevViewModeRef.current = viewMode;
+    setViewMode('full');
+    setTutorialActive(true);
+  }, [viewMode]);
+
+  const closeTutorial = useCallback(() => {
+    setTutorialActive(false);
+    try { localStorage.setItem('paris-trip-tutorial-done', 'true'); } catch {}
+    if (prevViewModeRef.current) {
+      setViewMode(prevViewModeRef.current);
+      prevViewModeRef.current = null;
+    }
+  }, []);
+
+  // Auto-start tutorial on first visit
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('paris-trip-tutorial-done')) return;
+    } catch { return; }
+    const timer = setTimeout(() => startTutorial(), 800);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist view mode
   useEffect(() => {
@@ -541,7 +568,7 @@ export default function App() {
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen font-sans transition-colors">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl 2xl:max-w-screen-2xl mx-auto">
         {/* Header — branded title */}
         <div className="text-center pt-2 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{t('header.title')}</h1>
@@ -594,7 +621,7 @@ export default function App() {
             {/* Weather pill */}
             {!isSimple && (weatherLoading ? <WeatherSkeleton /> : <WeatherPill weather={weather} locale={locale} t={t} onDayClick={(date) => { setActiveTab('planner'); }} />)}
             {/* View mode toggle */}
-            <button onClick={() => setViewMode(v => v === 'simple' ? 'full' : 'simple')} title={t('view.toggle')} aria-label={t('view.toggle')}
+            <button data-tutorial="view-toggle" onClick={() => setViewMode(v => v === 'simple' ? 'full' : 'simple')} title={t('view.toggle')} aria-label={t('view.toggle')}
               className={`flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border transition-colors ${
                 isSimple
                   ? 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -604,7 +631,7 @@ export default function App() {
               <span>{isSimple ? t('view.simple') : t('view.full')}</span>
             </button>
             {/* Dark mode toggle */}
-            <button onClick={() => setDarkMode(d => !d)} title={t('dark.toggle')} aria-label={t('dark.toggle')}
+            <button data-tutorial="dark-toggle" onClick={() => setDarkMode(d => !d)} title={t('dark.toggle')} aria-label={t('dark.toggle')}
               className={`flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border transition-colors ${
                 darkMode
                   ? 'border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
@@ -625,6 +652,7 @@ export default function App() {
               hiddenCount={hiddenCount}
               isSimple={isSimple}
               onSetBaseLocation={() => { setShowLocationInput(true); setShowSettings(false); }}
+              onStartTour={() => { setShowSettings(false); startTutorial(); }}
               t={t}
             />
           </div>
@@ -636,7 +664,7 @@ export default function App() {
         {/* Tabs + content */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
-            <div className="flex flex-1 min-w-0">
+            <div data-tutorial="tabs" className="flex flex-1 min-w-0">
               {TABS.map(tab => {
                 const Icon = tab.icon;
                 const active = activeTab === tab.id;
@@ -662,7 +690,7 @@ export default function App() {
                   <span className="hidden sm:inline font-medium">— {showHidden ? t('hidden.hide') : t('hidden.show')}</span>
                 </button>
               )}
-              <button onClick={() => setShowAddModal(true)}
+              <button data-tutorial="add-activity" onClick={() => setShowAddModal(true)}
                 title={t('header.addActivity')}
                 aria-label={t('header.addActivity')}
                 className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0">
@@ -715,13 +743,14 @@ export default function App() {
       {showAddModal && (
         <AddActivityModal onAdd={addCustomItem} onClose={() => setShowAddModal(false)} />
       )}
+      <Tutorial active={tutorialActive} onClose={closeTutorial} />
     </div>
   );
 }
 
-function SettingsMenu({ settingsRef, showSettings, setShowSettings, exportToCSV, copyItinerary, showHidden, setShowHidden, hiddenCount, isSimple, onSetBaseLocation, t }) {
+function SettingsMenu({ settingsRef, showSettings, setShowSettings, exportToCSV, copyItinerary, showHidden, setShowHidden, hiddenCount, isSimple, onSetBaseLocation, onStartTour, t }) {
   return (
-    <div ref={settingsRef} className="relative">
+    <div ref={settingsRef} data-tutorial="settings" className="relative">
       <button onClick={() => setShowSettings(s => !s)} title={t('settings.title')}
         aria-label={t('settings.title')}
         aria-expanded={showSettings}
@@ -772,6 +801,13 @@ function SettingsMenu({ settingsRef, showSettings, setShowSettings, exportToCSV,
             className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
             <Download size={14} className="text-gray-400" />
             {t('header.exportCsv')}
+          </button>
+          <div className="border-t border-gray-100 dark:border-gray-700" />
+          {/* Start tour */}
+          <button onClick={onStartTour}
+            className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
+            <HelpCircle size={14} className="text-gray-400" />
+            {t('settings.startTour')}
           </button>
         </div>
       )}

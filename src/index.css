@@ -79,12 +79,69 @@ input[type="checkbox"]:checked {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
+/* Tutorial spotlight overlay */
+.tutorial-spotlight {
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  pointer-events: none;
+  transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+}
+
+/* Tutorial arrow */
+.tutorial-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.tutorial-arrow-top {
+  top: -8px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid white;
+}
+.dark .tutorial-arrow-top {
+  border-bottom-color: #1f2937;
+}
+
+.tutorial-arrow-bottom {
+  bottom: -8px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+}
+.dark .tutorial-arrow-bottom {
+  border-top-color: #1f2937;
+}
+
+.tutorial-arrow-right {
+  right: -8px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid white;
+}
+.dark .tutorial-arrow-right {
+  border-left-color: #1f2937;
+}
+
+.tutorial-arrow-left {
+  left: -8px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid white;
+}
+.dark .tutorial-arrow-left {
+  border-right-color: #1f2937;
+}
+
 /* Print stylesheet */
 @media print {
   /* Hide interactive elements */
   button, input[type="checkbox"], input[type="date"],
   .leaflet-container, nav, .md\:hidden,
-  [class*="fixed"], [class*="shadow"] {
+  [class*="fixed"], [class*="shadow"],
+  .tutorial-spotlight {
     display: none !important;
   }
 

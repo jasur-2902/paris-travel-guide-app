@@ -27,7 +27,7 @@ export default function BudgetTracker({ items, budget, onBudgetChange }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm mb-4">
+    <div data-tutorial="budget" className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm mb-4">
       {/* Collapsed summary — always visible */}
       <button
         onClick={() => setExpanded(e => !e)}
