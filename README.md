@@ -1,89 +1,89 @@
 # Paris Trip Planner
 
-A feature-rich, offline-capable web app to plan, organize, and explore your Paris trip. Built with React, Leaflet maps, and Tailwind CSS — no backend required.
+A feature-rich, offline-capable web app to plan, organize, and explore your Paris trip. Built with React, Leaflet maps, and Tailwind CSS -no backend required.
 
 **[Live Demo](https://jasur-2902.github.io/paris-travel-guide-app/)**
 
-![Light Mode — Table View](screenshots/light-mode-main.png)
+![Light Mode -Table View](screenshots/light-mode-main.png)
 
 ---
 
 ## Features
 
 ### Activity Management
-- **48 pre-loaded Paris activities** — museums, landmarks, parks, restaurants, and more
+- **48 pre-loaded Paris activities** -museums, landmarks, parks, restaurants, and more
 - **Sortable table** with columns for date, type, metro station, hours, price, and transit time
-- **Filter & search** — instantly find activities by name or type
-- **Completion tracking** — check off visited places with animated checkmarks
+- **Filter & search** -instantly find activities by name or type
+- **Completion tracking** -check off visited places with animated checkmarks
 - **Hide/unhide** activities you're not interested in
-- **Add custom activities** — geocoded address search for any location in France
-- **Notes** — add personal notes to any activity
+- **Add custom activities** -geocoded address search for any location in France
+- **Notes** -add personal notes to any activity
 
 ### Itinerary Planner
 - **Drag-and-drop** day-by-day itinerary with @dnd-kit
-- **Split view** — itinerary panel + interactive map side by side
+- **Split view** -itinerary panel + interactive map side by side
 - **Day route lines** on the map connecting planned activities
-- **Closed-day warnings** — alerts when an activity is likely closed on your planned date
+- **Closed-day warnings** -alerts when an activity is likely closed on your planned date
 
-![Light Mode — Itinerary with Map](screenshots/light-mode-itinerary.png)
+![Light Mode -Itinerary with Map](screenshots/light-mode-itinerary.png)
 
 ### Interactive Map
 - **Leaflet map** with color-coded markers by activity type
 - **Popups** with full activity details, metro info, and Google Maps links
 - **Your base location** marker with custom styling
-- **Day route visualization** — dashed lines connecting same-day activities
+- **Day route visualization** -dashed lines connecting same-day activities
 
-![Light Mode — Map View](screenshots/light-mode-map-view.png)
+![Light Mode -Map View](screenshots/light-mode-map-view.png)
 
 ### Weather Integration
 - **16-day forecast + 14-day archive** from Open-Meteo API
-- **Weather pill** in the toolbar — collapsed summary with expandable 8-day grid
+- **Weather pill** in the toolbar -collapsed summary with expandable 8-day grid
 - **Click any day** to jump to that date in your itinerary
 - **Weather icons** mapped from WMO codes to Lucide icons
 
-![Dark Mode — Weather Popover](screenshots/dark-mode-weather.png)
+![Dark Mode -Weather Popover](screenshots/dark-mode-weather.png)
 
 ### Budget Tracker
-- **Collapsible budget bar** — spent, budget, and remaining at a glance
-- **Expandable details** — planned costs, total breakdown, editable budget target
+- **Collapsible budget bar** -spent, budget, and remaining at a glance
+- **Expandable details** -planned costs, total breakdown, editable budget target
 - **Color-coded** remaining balance (green = under budget, red = over)
 
-![Light Mode — Budget Feature](screenshots/light-mode-budget-feature.png)
+![Light Mode -Budget Feature](screenshots/light-mode-budget-feature.png)
 
 ### Transit Times
-- **Hybrid calculation** — OSRM walking times + metro estimation
+- **Hybrid calculation** -OSRM walking times + metro estimation
 - **Set your base address** via search or geolocation
 - **Per-activity transit times** updated automatically
-- **Day trip detection** — locations outside Paris keep default times
+- **Day trip detection** -locations outside Paris keep default times
 
 ### Dark Mode
 - **Full dark theme** with dark map tiles (CSS filter inversion)
-- **Dark Leaflet popups and controls** — seamless dark experience
-- **Persisted** to localStorage — remembers your preference
+- **Dark Leaflet popups and controls** -seamless dark experience
+- **Persisted** to localStorage -remembers your preference
 
-![Dark Mode — Table View](screenshots/dark-mode-main.png)
+![Dark Mode -Table View](screenshots/dark-mode-main.png)
 
 ### Simple & Full Views
-- **Simple mode** — streamlined interface showing only essential columns (date, activity, type, price)
-- **Full mode** — all columns plus weather pill, budget tracker, and hidden items toggle
-- **Smart defaults** — new users start in Simple mode; returning users get their saved preference
+- **Simple mode** -streamlined interface showing only essential columns (date, activity, type, price)
+- **Full mode** -all columns plus weather pill, budget tracker, and hidden items toggle
+- **Smart defaults** -new users start in Simple mode; returning users get their saved preference
 
-![Dark Mode — Simple View](screenshots/dark-mode-simple-mode.png)
+![Dark Mode -Simple View](screenshots/dark-mode-simple-mode.png)
 
 ### Multi-Language Support
-- **English, Spanish, and French** — 170+ translation keys
+- **English, Spanish, and French** -170+ translation keys
 - **Instant switching** via language selector in Settings
 - **Persisted** language preference
 
 ### Additional Features
-- **Onboarding tutorial** — 7-step spotlight walkthrough on first visit, replayable from Settings
-- **Trip Stats dashboard** — completion progress, type breakdown, cost and transit totals
-- **Contextual travel tips** — dismissible alerts for rainy days, busy schedules, unplanned activities
-- **Copy itinerary** — one-click clipboard copy of your day-by-day plan
-- **Export CSV** — download all activity data as a spreadsheet
-- **Print stylesheet** — clean printable layout
-- **PWA / offline support** — installable as a standalone app with service worker caching
-- **Mobile responsive** — card layout on small screens, floating action button, touch-optimized
+- **Onboarding tutorial** -7-step spotlight walkthrough on first visit, replayable from Settings
+- **Trip Stats dashboard** -completion progress, type breakdown, cost and transit totals
+- **Contextual travel tips** -dismissible alerts for rainy days, busy schedules, unplanned activities
+- **Copy itinerary** -one-click clipboard copy of your day-by-day plan
+- **Export CSV** -download all activity data as a spreadsheet
+- **Print stylesheet** -clean printable layout
+- **PWA / offline support** -installable as a standalone app with service worker caching
+- **Mobile responsive** -card layout on small screens, floating action button, touch-optimized
 
 ---
 
@@ -144,8 +144,8 @@ In Full view, the budget bar appears below the address input. Click to expand an
 The weather pill in the toolbar shows the temperature range for the next 8 days. Click to expand the full forecast grid. Click any day to jump to your itinerary for that date.
 
 ### 7. Switching Views
-- **Simple** — fewer columns, no weather pill or budget bar. Great for quick planning on mobile.
-- **Full** — all features visible. Best for detailed desktop planning.
+- **Simple** -fewer columns, no weather pill or budget bar. Great for quick planning on mobile.
+- **Full** -all features visible. Best for detailed desktop planning.
 
 ### 8. Dark Mode
 Toggle between light and dark themes using the Light/Dark button. The map tiles automatically adapt.
@@ -154,8 +154,8 @@ Toggle between light and dark themes using the Light/Dark button. The map tiles 
 Click **+ Add Activity** to add your own places. Search for an address, pick a type, set hours and price. Custom activities support all features including transit calculation.
 
 ### 10. Exporting & Sharing
-- **Copy itinerary** — copies a formatted day-by-day plan to your clipboard
-- **Export CSV** — downloads all activity data as a spreadsheet
+- **Copy itinerary** -copies a formatted day-by-day plan to your clipboard
+- **Export CSV** -downloads all activity data as a spreadsheet
 - Both options are available in the Settings menu (gear icon)
 
 ### Keyboard Shortcuts
@@ -227,7 +227,7 @@ App.jsx (state owner)
 
 ### Data Persistence
 
-Everything is persisted to `localStorage` — no server or database needed:
+Everything is persisted to `localStorage` -no server or database needed:
 
 | Key | Data |
 |-----|------|
@@ -267,12 +267,12 @@ App.jsx
 
 ### Key Design Patterns
 
-- **Click-outside dismiss** — `useRef` + `useEffect` with `mousedown` listener (settings, weather pill, kebab menus, address dropdown)
-- **Hybrid transit estimation** — OSRM walking time + metro heuristic based on distance thresholds
-- **Progressive disclosure** — Simple/Full view toggle following Hick's Law
-- **Spotlight tutorial** — CSS `box-shadow: 0 0 0 9999px` overlay with positioned tooltip
-- **i18n via React Context** — `useLanguage()` hook provides `t()` function with parameter interpolation
-- **Responsive breakpoints** — Desktop table at `md+`, card layout below; responsive grid for weather
+- **Click-outside dismiss** -`useRef` + `useEffect` with `mousedown` listener (settings, weather pill, kebab menus, address dropdown)
+- **Hybrid transit estimation** -OSRM walking time + metro heuristic based on distance thresholds
+- **Progressive disclosure** -Simple/Full view toggle following Hick's Law
+- **Spotlight tutorial** -CSS `box-shadow: 0 0 0 9999px` overlay with positioned tooltip
+- **i18n via React Context** -`useLanguage()` hook provides `t()` function with parameter interpolation
+- **Responsive breakpoints** -Desktop table at `md+`, card layout below; responsive grid for weather
 
 ---
 
