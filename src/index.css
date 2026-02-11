@@ -33,3 +33,14 @@
 .dark .leaflet-control-attribution a {
   color: #60a5fa;
 }
+
+/* Dark mode map: invert OSM tiles for a natural dark look */
+.dark-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
+/* Prevent markers/popups/controls from being inverted */
+.dark-map .leaflet-marker-pane,
+.dark-map .leaflet-popup-pane,
+.dark-map .leaflet-control-container {
+  filter: none;
+}

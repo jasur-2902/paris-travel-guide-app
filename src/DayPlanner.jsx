@@ -181,12 +181,6 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
     return result;
   }, [sortedDates, scheduled, selectedDate]);
 
-  const tileUrl = darkMode
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  const tileAttribution = darkMode
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
   return (
     <div className="flex flex-col lg:flex-row">
@@ -402,13 +396,12 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
       {/* Right: Mini Map */}
       {sortedDates.length > 0 && (
         <div className="lg:w-[420px] lg:shrink-0 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700">
-          <div className="h-[350px] lg:h-[500px] w-full">
+          <div className={`h-[350px] lg:h-[500px] w-full ${darkMode ? 'dark-map' : ''}`}>
             <MapContainer center={mapCenter} zoom={mapZoom} className="h-full w-full z-0">
               <ChangeView center={mapCenter} zoom={mapZoom} />
               <TileLayer
-                key={darkMode ? 'dark' : 'light'}
-                attribution={tileAttribution}
-                url={tileUrl}
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
 
               {/* Route line for selected day */}

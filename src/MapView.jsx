@@ -52,20 +52,12 @@ export default function MapView({ items, userLocation, darkMode }) {
       }));
   }, [items]);
 
-  const tileUrl = darkMode
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  const tileAttribution = darkMode
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-
   return (
-    <div className="h-[500px] w-full">
+    <div className={`h-[500px] w-full ${darkMode ? 'dark-map' : ''}`}>
       <MapContainer center={center} zoom={13} className="h-full w-full rounded-b-xl z-0">
         <TileLayer
-          key={darkMode ? 'dark' : 'light'}
-          attribution={tileAttribution}
-          url={tileUrl}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {dayRoutes.map(route => (
