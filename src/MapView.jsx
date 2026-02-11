@@ -75,17 +75,17 @@ export default function MapView({ items, userLocation, darkMode }) {
             <Popup>
               <div className="text-sm min-w-[180px]">
                 <strong>{item.activity}</strong>
-                {item.isCustom && <span style={{ marginLeft: 6, fontSize: 10, background: '#f3e8ff', color: '#7e22ce', padding: '1px 5px', borderRadius: 3, fontWeight: 600 }}>Custom</span>}
+                {item.isCustom && <span className="ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 text-purple-700">{t('table.custom')}</span>}
                 <div className="text-xs text-gray-500 mt-1 space-y-0.5">
                   <div>{item.type} · {item.days}</div>
                   <div>{item.hours}</div>
                   <div>{item.price} · {item.time}</div>
                   <div>{item.location}</div>
-                  {item.metro && <div style={{ color: '#6366f1', fontWeight: 500 }}>{item.metro}</div>}
+                  {item.metro && <div className="text-indigo-500 font-medium">{item.metro}</div>}
                   {item.plannedDate && <div className="font-medium text-blue-600 mt-1">{t('map.planned')}: {item.plannedDate}</div>}
                   {item.completed && <div className="font-medium text-green-600">{t('map.done')} ✓</div>}
-                  <a href={getGoogleMapsUrl(item.lat, item.lon)} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
+                  <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-blue-600 font-medium hover:text-blue-700">
                     {t('map.openMaps')} ↗
                   </a>
                 </div>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, MapPin, X, Loader2, LocateFixed, AlertCircle, CheckCircle2, Table, CalendarDays, Map, Plus, Eye, EyeOff, Sun as SunIcon, Moon, Globe, Cloud, CloudSun, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog, ChevronDown, Settings, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Download, MapPin, X, Loader2, LocateFixed, AlertCircle, CheckCircle2, Table, CalendarDays, Map, Plus, Eye, EyeOff, Sun as SunIcon, Moon, Globe, Cloud, CloudSun, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog, ChevronDown, Settings, ToggleLeft, ToggleRight, ClipboardCopy } from 'lucide-react';
 import { STORAGE_KEY, initialData, isInFrance, formatAddress, getWeatherInfo, estimateHybridTransit } from './utils';
 import { useLanguage, SUPPORTED_LANGUAGES } from './i18n';
 import TableView from './TableView';
 import DayPlanner from './DayPlanner';
 import MapView from './MapView';
 import BudgetTracker from './BudgetTracker';
+import TripStats from './TripStats';
+import TripTips from './TripTips';
 import AddActivityModal from './AddActivityModal';
 
 function loadSavedData() {
@@ -58,6 +60,15 @@ function Notification({ notification, onDismiss }) {
 
 const WEATHER_ICONS = { Sun: SunIcon, CloudSun, Cloud, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog };
 
+function WeatherSkeleton() {
+  return (
+    <div className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+      <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-600 animate-skeleton" />
+      <div className="w-16 h-3 rounded bg-gray-200 dark:bg-gray-600 animate-skeleton" />
+    </div>
+  );
+}
+
 function WeatherPill({ weather, locale, t, onDayClick }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -92,17 +103,17 @@ function WeatherPill({ weather, locale, t, onDayClick }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 mr-2 text-xs rounded-full border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors"
+        className="flex items-center gap-1.5 h-8 px-3 text-xs rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors"
       >
         <PillIcon size={15} />
         <span className="font-semibold">{minLow}° — {maxHigh}°C</span>
-        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 min-w-[320px]">
+        <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 min-w-[280px] sm:min-w-[320px]">
           <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">{t('weather.forecast')}</div>
-          <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
             {dates.map(date => {
               const w = weather[date];
               const info = getWeatherInfo(w.code);
@@ -143,21 +154,23 @@ export default function App() {
     try {
       const sv = localStorage.getItem('paris-trip-view');
       if (sv) return sv;
-      if (localStorage.getItem(STORAGE_KEY)) return 'full';
-      return 'simple';
-    } catch { return 'simple'; }
+      return 'full';
+    } catch { return 'full'; }
   });
   const [activeTab, setActiveTab] = useState(() => {
     if (saved?.activeTab) return saved.activeTab;
-    const sv = localStorage.getItem('paris-trip-view');
-    if (!sv || sv === 'simple') return 'planner';
     return 'table';
   });
   const [budget, setBudget] = useState(() => saved?.budget || 0);
   const [darkMode, setDarkMode] = useState(() => {
-    try { return localStorage.getItem('paris-trip-dark') === 'true'; } catch { return false; }
+    try {
+      const saved = localStorage.getItem('paris-trip-dark');
+      if (saved !== null) return saved === 'true';
+      return true;
+    } catch { return true; }
   });
   const [weather, setWeather] = useState({});
+  const [weatherLoading, setWeatherLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -250,7 +263,10 @@ export default function App() {
         }
       } catch {}
 
-      if (!cancelled) setWeather(weatherMap);
+      if (!cancelled) {
+        setWeather(weatherMap);
+        setWeatherLoading(false);
+      }
     }
     fetchWeather();
     return () => { cancelled = true; };
@@ -452,6 +468,40 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const copyItinerary = async () => {
+    const byDate = {};
+    items.filter(i => i.plannedDate && !i.hidden).forEach(i => {
+      if (!byDate[i.plannedDate]) byDate[i.plannedDate] = [];
+      byDate[i.plannedDate].push(i);
+    });
+    const sortedDates = Object.keys(byDate).sort();
+    if (sortedDates.length === 0) {
+      showNotification('error', t('copy.noPlanned'));
+      return;
+    }
+    const lines = [];
+    lines.push(`🗼 ${t('header.title')}\n`);
+    sortedDates.forEach(date => {
+      const d = new Date(date + 'T12:00:00');
+      const label = d.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
+      lines.push(`📅 ${label}`);
+      byDate[date]
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .forEach((item, idx) => {
+          const check = item.completed ? '✅' : '⬜';
+          lines.push(`  ${idx + 1}. ${check} ${item.activity} — ${item.price} (${item.hours})`);
+          if (item.notes) lines.push(`     📝 ${item.notes}`);
+        });
+      lines.push('');
+    });
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      showNotification('success', t('copy.success'));
+    } catch {
+      showNotification('error', t('copy.error'));
+    }
+  };
+
   const visibleItems = showHidden ? items : items.filter(i => !i.hidden);
 
   const TABS = [
@@ -463,12 +513,17 @@ export default function App() {
   return (
     <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen font-sans transition-colors">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header — branded title */}
+        <div className="text-center pt-2 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{t('header.title')}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('header.subtitle')}</p>
+        </div>
+
+        {/* Controls row */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('header.title')}</h1>
             {(!isSimple || showLocationInput) && (
-              <div className="relative mt-2" ref={dropdownRef}>
+              <div className="relative" ref={dropdownRef}>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1 max-w-md">
                     <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
@@ -476,15 +531,17 @@ export default function App() {
                       value={addressQuery}
                       onChange={(e) => { setAddressQuery(e.target.value); setShowSuggestions(true); }}
                       onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                      className="w-full text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg pl-9 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-800" />
+                      className="w-full h-10 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg pl-9 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-800" />
                     {userLocation && (
-                      <button onClick={() => { resetLocation(); if (isSimple) setShowLocationInput(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                      <button onClick={() => { resetLocation(); if (isSimple) setShowLocationInput(false); }}
+                        aria-label={t('header.clearAddress') || 'Clear address'}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                         <X size={14} />
                       </button>
                     )}
                   </div>
                   <button onClick={useMyLocation} disabled={isCalculating} title={t('header.useMyLocation')}
-                    className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-lg px-2 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors shrink-0 disabled:opacity-50">
+                    className="flex items-center gap-1 h-10 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-lg px-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors shrink-0 disabled:opacity-50">
                     <LocateFixed size={14} />
                     <span className="hidden sm:inline">{t('header.myLocation')}</span>
                   </button>
@@ -504,30 +561,36 @@ export default function App() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Weather pill */}
+            {!isSimple && (weatherLoading ? <WeatherSkeleton /> : <WeatherPill weather={weather} locale={locale} t={t} onDayClick={(date) => { setActiveTab('planner'); }} />)}
             {/* View mode toggle */}
-            <button onClick={() => setViewMode(v => v === 'simple' ? 'full' : 'simple')} title={t('view.toggle')}
-              className={`flex items-center gap-1.5 text-xs border rounded-lg px-2.5 py-1.5 transition-colors ${
+            <button onClick={() => setViewMode(v => v === 'simple' ? 'full' : 'simple')} title={t('view.toggle')} aria-label={t('view.toggle')}
+              className={`flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border transition-colors ${
                 isSimple
-                  ? 'text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                  ? 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
               }`}>
-              {isSimple ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
+              {isSimple ? <ToggleLeft size={15} /> : <ToggleRight size={15} />}
               <span className="hidden sm:inline">{isSimple ? t('view.simple') : t('view.full')}</span>
             </button>
-            {/* Add Activity — desktop only */}
-            <button onClick={() => setShowAddModal(true)}
-              className="hidden md:flex items-center gap-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow transition-colors shrink-0">
-              <Plus size={18} /> <span className="hidden sm:inline">{t('header.addActivity')}</span>
+            {/* Dark mode toggle */}
+            <button onClick={() => setDarkMode(d => !d)} title={t('dark.toggle')} aria-label={t('dark.toggle')}
+              className={`flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border transition-colors ${
+                darkMode
+                  ? 'border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}>
+              {darkMode ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+              <span className="hidden sm:inline">{darkMode ? t('dark.dark') : t('dark.light')}</span>
             </button>
             {/* Settings menu */}
             <SettingsMenu
               settingsRef={settingsRef}
               showSettings={showSettings}
               setShowSettings={setShowSettings}
-              darkMode={darkMode}
-              setDarkMode={setDarkMode}
               exportToCSV={exportToCSV}
+              copyItinerary={copyItinerary}
               showHidden={showHidden}
               setShowHidden={setShowHidden}
               hiddenCount={hiddenCount}
@@ -559,35 +622,54 @@ export default function App() {
                 );
               })}
             </div>
-            <div className="flex items-center">
-              {!isSimple && <WeatherPill weather={weather} locale={locale} t={t} onDayClick={(date) => { setActiveTab('planner'); }} />}
+            <div className="flex items-center gap-2 mr-2">
               {!isSimple && hiddenCount > 0 && (
                 <button onClick={() => setShowHidden(h => !h)}
-                  className="flex items-center gap-1.5 px-4 py-2 mr-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   {showHidden ? <Eye size={14} /> : <EyeOff size={14} />}
                   {t('hidden.count', { count: hiddenCount })}
                   <span className="font-medium">— {showHidden ? t('hidden.hide') : t('hidden.show')}</span>
                 </button>
               )}
+              <button onClick={() => setShowAddModal(true)}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0">
+                <Plus size={15} /> {t('header.addActivity')}
+              </button>
             </div>
           </div>
 
-          {activeTab === 'table' && (
-            <TableView items={visibleItems} sortConfig={sortConfig} requestSort={requestSort}
-              toggleComplete={toggleComplete} updateDate={updateDate} updateNotes={updateNotes}
-              searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-              toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden}
-              simpleView={isSimple} />
-          )}
-          {activeTab === 'planner' && (
-            <DayPlanner items={visibleItems} allItems={items} toggleComplete={toggleComplete} updateDate={updateDate} updateNotes={updateNotes}
-              toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden}
-              reorderItems={reorderItems} userLocation={userLocation} weather={weather} darkMode={darkMode} />
-          )}
-          {activeTab === 'map' && (
-            <MapView items={visibleItems} userLocation={userLocation} darkMode={darkMode} />
-          )}
+          <div className="relative">
+            {isCalculating && (
+              <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                  <Loader2 size={16} className="text-blue-500 animate-spin" />
+                  <span className="text-sm text-gray-600 dark:text-gray-300">{t('notify.calculating') || 'Calculating transit times...'}</span>
+                </div>
+              </div>
+            )}
+            {activeTab === 'table' && (
+              <TableView items={visibleItems} sortConfig={sortConfig} requestSort={requestSort}
+                toggleComplete={toggleComplete} updateDate={updateDate} updateNotes={updateNotes}
+                searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+                toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden}
+                simpleView={isSimple} />
+            )}
+            {activeTab === 'planner' && (
+              <DayPlanner items={visibleItems} allItems={items} toggleComplete={toggleComplete} updateDate={updateDate} updateNotes={updateNotes}
+                toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden}
+                reorderItems={reorderItems} userLocation={userLocation} weather={weather} darkMode={darkMode} />
+            )}
+            {activeTab === 'map' && (
+              <MapView items={visibleItems} userLocation={userLocation} darkMode={darkMode} />
+            )}
+          </div>
         </div>
+
+        {/* Stats & Tips — below main content */}
+        {!isSimple && <div className="mt-4 space-y-3">
+          <TripStats items={items.filter(i => !i.hidden)} />
+          <TripTips items={items.filter(i => !i.hidden)} weather={weather} />
+        </div>}
 
         <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
           {userLocation
@@ -599,7 +681,8 @@ export default function App() {
       {/* Mobile FAB — Add Activity */}
       <button onClick={() => setShowAddModal(true)}
         className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors active:scale-95"
-        title={t('header.addActivity')}>
+        title={t('header.addActivity')}
+        aria-label={t('header.addActivity')}>
         <Plus size={24} />
       </button>
 
@@ -610,30 +693,22 @@ export default function App() {
   );
 }
 
-function SettingsMenu({ settingsRef, showSettings, setShowSettings, darkMode, setDarkMode, exportToCSV, showHidden, setShowHidden, hiddenCount, isSimple, onSetBaseLocation, t }) {
+function SettingsMenu({ settingsRef, showSettings, setShowSettings, exportToCSV, copyItinerary, showHidden, setShowHidden, hiddenCount, isSimple, onSetBaseLocation, t }) {
   return (
     <div ref={settingsRef} className="relative">
       <button onClick={() => setShowSettings(s => !s)} title={t('settings.title')}
-        className="flex items-center justify-center w-9 h-9 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300">
-        <Settings size={18} />
+        aria-label={t('settings.title')}
+        aria-expanded={showSettings}
+        className="flex items-center justify-center h-8 w-8 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+        <Settings size={15} />
       </button>
       {showSettings && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[240px] py-1">
+        <div role="menu" className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[240px] py-1">
           {/* Language */}
           <div className="px-3 py-2.5 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.language')}</span>
             <LanguageSelector />
           </div>
-          <div className="border-t border-gray-100 dark:border-gray-700" />
-          {/* Dark mode */}
-          <button onClick={() => setDarkMode(d => !d)}
-            className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.darkMode')}</span>
-            <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-              {darkMode ? <SunIcon size={14} className="text-yellow-400" /> : <Moon size={14} />}
-              {darkMode ? t('dark.light') : t('dark.dark')}
-            </span>
-          </button>
           {/* Set location (simple view only) */}
           {isSimple && (
             <>
@@ -658,6 +733,13 @@ function SettingsMenu({ settingsRef, showSettings, setShowSettings, darkMode, se
               </button>
             </>
           )}
+          <div className="border-t border-gray-100 dark:border-gray-700" />
+          {/* Copy Itinerary */}
+          <button onClick={() => { copyItinerary(); setShowSettings(false); }}
+            className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
+            <ClipboardCopy size={14} className="text-gray-400" />
+            {t('settings.copyItinerary')}
+          </button>
           <div className="border-t border-gray-100 dark:border-gray-700" />
           {/* Export CSV */}
           <button onClick={() => { exportToCSV(); setShowSettings(false); }}

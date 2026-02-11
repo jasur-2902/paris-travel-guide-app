@@ -6,6 +6,7 @@ const translations = {
   en: {
     // Header
     'header.title': 'Paris Trip Planner',
+    'header.subtitle': 'Plan, organize & explore your trip',
     'header.addressPlaceholder': 'Enter your base address in France...',
     'header.myLocation': 'My location',
     'header.useMyLocation': 'Use my current location',
@@ -23,6 +24,7 @@ const translations = {
     'hidden.show': 'Show',
 
     // Notifications
+    'notify.calculating': 'Calculating transit times...',
     'notify.transitUpdated': 'Transit times updated for your location.',
     'notify.transitError': 'Could not calculate transit times: {error}. Default times are shown.',
     'notify.selectFrance': 'Please select an address in France.',
@@ -66,6 +68,8 @@ const translations = {
     'table.transit': 'Transit',
     'table.actions': 'Actions',
     'table.noResults': 'No activities found matching your search.',
+    'table.noResultsTitle': 'No results found',
+    'table.noResultsDesc': 'Try a different search term or clear the filter.',
     'table.closedOnDay': 'Closed on this day (open {days})',
     'table.checkVenue': 'Check venue for exact open days',
     'table.openMaps': 'Open in Google Maps',
@@ -79,6 +83,9 @@ const translations = {
 
     // Planner
     'planner.noPlanned': 'No dates planned yet. Assign dates in the Table view to see your itinerary here.',
+    'planner.emptyTitle': 'No itinerary yet',
+    'planner.emptyDesc': 'Assign dates to your activities in the Table view to build your day-by-day itinerary.',
+    'planner.goToTable': '← Go to Table to plan dates',
     'planner.unscheduled': 'Unscheduled',
     'planner.done': 'done',
     'planner.drag': 'Drag to reorder',
@@ -126,6 +133,31 @@ const translations = {
     'modal.addressRequired': 'Please search and select an address.',
     'modal.selectFrance': 'Please select a location in France.',
 
+    // Stats
+    'stats.title': 'Trip Stats',
+    'stats.completed': 'done',
+    'stats.daysPlanned': 'days planned',
+    'stats.progress': 'Completion',
+    'stats.totalCost': 'Total cost',
+    'stats.totalTransit': 'Total transit',
+    'stats.priciest': 'Priciest day',
+    'stats.days': 'days',
+    'stats.byType': 'Activities by type',
+
+    // Tips
+    'tips.noPlans': 'No activities planned yet — assign dates in the Table view to start building your itinerary.',
+    'tips.busyDay': 'You have {count} activities on one day. Consider spreading them across multiple days.',
+    'tips.rainyOutdoor': 'Rain is forecast on a day with outdoor activities. Consider swapping with indoor alternatives.',
+    'tips.manyUnplanned': '{count} activities are still unscheduled. Assign dates to include them in your itinerary.',
+
+    // Copy
+    'copy.success': 'Itinerary copied to clipboard!',
+    'copy.error': 'Could not copy to clipboard.',
+    'copy.noPlanned': 'No planned activities to copy.',
+
+    // Settings
+    'settings.copyItinerary': 'Copy itinerary',
+
     // CSV
     'csv.status': 'Status',
     'csv.plannedDate': 'Planned Date',
@@ -156,6 +188,7 @@ const translations = {
   },
   es: {
     'header.title': 'Planificador de Viaje a París',
+    'header.subtitle': 'Planifica, organiza y explora tu viaje',
     'header.addressPlaceholder': 'Ingresa tu dirección base en Francia...',
     'header.myLocation': 'Mi ubicación',
     'header.useMyLocation': 'Usar mi ubicación actual',
@@ -170,6 +203,7 @@ const translations = {
     'hidden.hide': 'Ocultar',
     'hidden.show': 'Mostrar',
 
+    'notify.calculating': 'Calculando tiempos de tránsito...',
     'notify.transitUpdated': 'Tiempos de tránsito actualizados para tu ubicación.',
     'notify.transitError': 'No se pudieron calcular los tiempos: {error}. Se muestran tiempos predeterminados.',
     'notify.selectFrance': 'Por favor selecciona una dirección en Francia.',
@@ -208,6 +242,8 @@ const translations = {
     'table.transit': 'Tránsito',
     'table.actions': 'Acciones',
     'table.noResults': 'No se encontraron actividades que coincidan con tu búsqueda.',
+    'table.noResultsTitle': 'Sin resultados',
+    'table.noResultsDesc': 'Prueba con otro término de búsqueda o borra el filtro.',
     'table.closedOnDay': 'Cerrado este día (abierto {days})',
     'table.checkVenue': 'Consulta el lugar para días exactos de apertura',
     'table.openMaps': 'Abrir en Google Maps',
@@ -220,6 +256,9 @@ const translations = {
     'table.custom': 'Personal',
 
     'planner.noPlanned': 'No hay fechas planificadas. Asigna fechas en la vista de Tabla para ver tu itinerario aquí.',
+    'planner.emptyTitle': 'Aún no hay itinerario',
+    'planner.emptyDesc': 'Asigna fechas a tus actividades en la vista de Tabla para crear tu itinerario día a día.',
+    'planner.goToTable': '← Ir a Tabla para planificar fechas',
     'planner.unscheduled': 'Sin programar',
     'planner.done': 'hechos',
     'planner.drag': 'Arrastra para reordenar',
@@ -264,6 +303,27 @@ const translations = {
     'modal.addressRequired': 'Busca y selecciona una dirección.',
     'modal.selectFrance': 'Selecciona una ubicación en Francia.',
 
+    'stats.title': 'Estadísticas del viaje',
+    'stats.completed': 'hechos',
+    'stats.daysPlanned': 'días planificados',
+    'stats.progress': 'Progreso',
+    'stats.totalCost': 'Costo total',
+    'stats.totalTransit': 'Tránsito total',
+    'stats.priciest': 'Día más caro',
+    'stats.days': 'días',
+    'stats.byType': 'Actividades por tipo',
+
+    'tips.noPlans': 'Aún no hay actividades planificadas. Asigna fechas en la vista de Tabla para empezar.',
+    'tips.busyDay': 'Tienes {count} actividades en un día. Considera distribuirlas en varios días.',
+    'tips.rainyOutdoor': 'Se pronostica lluvia en un día con actividades al aire libre. Considera alternativas en interior.',
+    'tips.manyUnplanned': '{count} actividades aún no tienen fecha. Asigna fechas para incluirlas en tu itinerario.',
+
+    'copy.success': '¡Itinerario copiado al portapapeles!',
+    'copy.error': 'No se pudo copiar al portapapeles.',
+    'copy.noPlanned': 'No hay actividades planificadas para copiar.',
+
+    'settings.copyItinerary': 'Copiar itinerario',
+
     'csv.status': 'Estado',
     'csv.plannedDate': 'Fecha planificada',
     'csv.done': 'Hecho',
@@ -292,6 +352,7 @@ const translations = {
   },
   fr: {
     'header.title': 'Planificateur de Voyage à Paris',
+    'header.subtitle': 'Planifiez, organisez et explorez votre voyage',
     'header.addressPlaceholder': 'Entrez votre adresse de base en France...',
     'header.myLocation': 'Ma position',
     'header.useMyLocation': 'Utiliser ma position actuelle',
@@ -306,6 +367,7 @@ const translations = {
     'hidden.hide': 'Masquer',
     'hidden.show': 'Afficher',
 
+    'notify.calculating': 'Calcul des temps de trajet...',
     'notify.transitUpdated': 'Temps de trajet mis à jour pour votre position.',
     'notify.transitError': 'Impossible de calculer les temps de trajet : {error}. Les temps par défaut sont affichés.',
     'notify.selectFrance': 'Veuillez sélectionner une adresse en France.',
@@ -344,6 +406,8 @@ const translations = {
     'table.transit': 'Trajet',
     'table.actions': 'Actions',
     'table.noResults': 'Aucune activité ne correspond à votre recherche.',
+    'table.noResultsTitle': 'Aucun résultat',
+    'table.noResultsDesc': 'Essayez un autre terme de recherche ou effacez le filtre.',
     'table.closedOnDay': 'Fermé ce jour (ouvert {days})',
     'table.checkVenue': 'Vérifiez le lieu pour les jours d\'ouverture exacts',
     'table.openMaps': 'Ouvrir dans Google Maps',
@@ -356,6 +420,9 @@ const translations = {
     'table.custom': 'Perso',
 
     'planner.noPlanned': 'Aucune date planifiée. Assignez des dates dans la vue Tableau pour voir votre itinéraire ici.',
+    'planner.emptyTitle': 'Pas encore d\'itinéraire',
+    'planner.emptyDesc': 'Assignez des dates à vos activités dans la vue Tableau pour créer votre itinéraire jour par jour.',
+    'planner.goToTable': '← Aller au Tableau pour planifier les dates',
     'planner.unscheduled': 'Non planifié',
     'planner.done': 'faits',
     'planner.drag': 'Glisser pour réorganiser',
@@ -399,6 +466,27 @@ const translations = {
     'modal.nameRequired': 'Le nom de l\'activité est requis.',
     'modal.addressRequired': 'Veuillez rechercher et sélectionner une adresse.',
     'modal.selectFrance': 'Veuillez sélectionner un lieu en France.',
+
+    'stats.title': 'Statistiques du voyage',
+    'stats.completed': 'faits',
+    'stats.daysPlanned': 'jours planifiés',
+    'stats.progress': 'Progression',
+    'stats.totalCost': 'Coût total',
+    'stats.totalTransit': 'Trajet total',
+    'stats.priciest': 'Jour le plus cher',
+    'stats.days': 'jours',
+    'stats.byType': 'Activités par type',
+
+    'tips.noPlans': 'Aucune activité planifiée. Assignez des dates dans le Tableau pour commencer.',
+    'tips.busyDay': 'Vous avez {count} activités en un jour. Pensez à les répartir sur plusieurs jours.',
+    'tips.rainyOutdoor': 'De la pluie est prévue un jour avec des activités extérieures. Envisagez des alternatives en intérieur.',
+    'tips.manyUnplanned': '{count} activités n\'ont pas encore de date. Assignez des dates pour les inclure.',
+
+    'copy.success': 'Itinéraire copié dans le presse-papiers !',
+    'copy.error': 'Impossible de copier dans le presse-papiers.',
+    'copy.noPlanned': 'Aucune activité planifiée à copier.',
+
+    'settings.copyItinerary': 'Copier l\'itinéraire',
 
     'csv.status': 'Statut',
     'csv.plannedDate': 'Date prévue',

@@ -1,6 +1,9 @@
 import { METRO_STATIONS } from './metroStations';
 
-export function getGoogleMapsUrl(lat, lon) {
+export function getGoogleMapsUrl(lat, lon, name) {
+  if (name) {
+    return `https://www.google.com/maps/search/${encodeURIComponent(name + ', Paris')}/@${lat},${lon},17z`;
+  }
   return `https://www.google.com/maps?q=${lat},${lon}`;
 }
 

@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AlertTriangle, Clock, Euro, EyeOff, Eye, Trash2, ExternalLink, GripVertical, Train, MessageSquare, Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog } from 'lucide-react';
+import { AlertTriangle, Clock, Euro, EyeOff, Eye, Trash2, ExternalLink, GripVertical, Train, MessageSquare, X, CalendarDays, Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog } from 'lucide-react';
 import { getDayLabel, getTypeColor, isClosedOnDate, parsePrice, parseTimeToMinutes, getGoogleMapsUrl, getWeatherInfo, DAY_COLORS } from './utils';
 import { useLanguage } from './i18n';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -70,7 +70,8 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
   const [editingNoteId, setEditingNoteId] = useState(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const { scheduled, unscheduled, sortedDates } = useMemo(() => {
@@ -156,14 +157,15 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
     if (item.isCustom) {
       return (
         <button onClick={() => deleteCustomItem(item.id)} title={t('table.deleteCustom')}
-          className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0">
+          className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0">
           <Trash2 size={14} />
         </button>
       );
     }
     return (
       <button onClick={() => toggleHidden(item.id)} title={item.hidden ? t('table.unhide') : t('table.hide')}
-        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0">
+        aria-label={item.hidden ? t('table.unhide') : t('table.hide')}
+        className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0">
         {item.hidden ? <Eye size={14} /> : <EyeOff size={14} />}
       </button>
     );
@@ -189,8 +191,11 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="p-4 space-y-4">
             {sortedDates.length === 0 && unscheduled.length === items.length && (
-              <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-                {t('planner.noPlanned')}
+              <div className="text-center py-16">
+                <CalendarDays size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                <h3 className="text-base font-semibold text-gray-600 dark:text-gray-300 mb-1">{t('planner.emptyTitle')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('planner.emptyDesc')}</p>
+                <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{t('planner.goToTable')}</span>
               </div>
             )}
 
@@ -275,22 +280,22 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                                     <span className={`font-medium text-sm ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                                       {item.activity}
                                     </span>
-                                    <a href={getGoogleMapsUrl(item.lat, item.lon)} target="_blank" rel="noopener noreferrer"
+                                    <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
                                       title={t('table.openMaps')} className="text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
                                       <ExternalLink size={12} />
                                     </a>
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${item.completed ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400' : getTypeColor(item.type)}`}>
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${item.completed ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400' : getTypeColor(item.type)}`}>
                                       {item.type}
                                     </span>
                                     {item.isCustom && (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">{t('table.custom')}</span>
+                                      <span className="px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">{t('table.custom')}</span>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
                                     <span>{item.hours}</span>
                                     <span>{item.price}</span>
                                     <span className="flex items-center gap-0.5">
-                                      {item.transitMethod === 'metro' && <Train size={11} className="text-indigo-500" />}
+                                      {item.transitMethod === 'metro' && <Train size={14} className="text-indigo-500" />}
                                       {item.time}
                                     </span>
                                     {item.metro && (
@@ -306,7 +311,7 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                                     </div>
                                   )}
                                   {closed === 'maybe' && (
-                                    <div className="flex items-center gap-1 mt-1.5 text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                                    <div className="flex items-center gap-1 mt-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
                                       <AlertTriangle size={12} />
                                       {t('planner.checkVenue')}
                                     </div>
@@ -334,16 +339,18 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                                 <div className="flex items-center gap-0.5 shrink-0">
                                   <button onClick={() => setEditingNoteId(isEditingNote ? null : item.id)}
                                     title={item.notes ? t('table.editNote') : t('table.addNote')}
-                                    className={`p-1 rounded transition-colors ${item.notes ? 'text-blue-500 hover:text-blue-700 dark:hover:text-blue-300' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400'}`}>
-                                    <MessageSquare size={13} />
+                                    aria-label={item.notes ? t('table.editNote') : t('table.addNote')}
+                                    className={`p-2 rounded-lg transition-colors ${item.notes ? 'text-blue-500 hover:text-blue-700 dark:hover:text-blue-300' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400'}`}>
+                                    <MessageSquare size={14} />
                                   </button>
                                   <ActionButton item={item} />
                                   <button
                                     onClick={() => updateDate(item.id, '')}
-                                    className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-red-500 shrink-0 px-1"
+                                    className="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0"
                                     title={t('planner.remove')}
+                                    aria-label={t('planner.remove')}
                                   >
-                                    ✕
+                                    <X size={14} />
                                   </button>
                                 </div>
                               </div>
@@ -365,17 +372,17 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                 </div>
                 <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                   {unscheduled.map(item => (
-                    <li key={item.id} className={`px-5 py-2.5 flex items-center gap-3 ${item.hidden ? 'opacity-50 bg-gray-50/80 dark:bg-gray-800/50' : ''}`}>
+                    <li key={item.id} className={`px-5 py-3 flex items-center gap-3 ${item.hidden ? 'opacity-50 bg-gray-50/80 dark:bg-gray-800/50' : ''}`}>
                       <input type="checkbox" checked={item.completed} onChange={() => toggleComplete(item.id)}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer shrink-0" />
                       <span className={`flex-1 text-sm flex items-center gap-1.5 ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
                         {item.activity}
-                        <a href={getGoogleMapsUrl(item.lat, item.lon)} target="_blank" rel="noopener noreferrer"
+                        <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
                           title={t('table.openMaps')} className="text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors inline-flex">
                           <ExternalLink size={12} />
                         </a>
                         {item.isCustom && (
-                          <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">{t('table.custom')}</span>
+                          <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">{t('table.custom')}</span>
                         )}
                       </span>
                       {item.metro && <span className="text-xs text-indigo-400 dark:text-indigo-300 flex items-center gap-0.5"><Train size={11} /> {item.metro}</span>}
@@ -438,7 +445,7 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                       <strong>{item.activity}</strong>
                       <div className="text-xs text-gray-500 mt-1">
                         <div>{item.hours} · {item.price}</div>
-                        {item.metro && <div style={{ color: '#6366f1' }}>{item.metro}</div>}
+                        {item.metro && <div className="text-indigo-500 font-medium">{item.metro}</div>}
                       </div>
                     </div>
                   </Popup>

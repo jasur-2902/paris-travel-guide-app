@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Clock, Calendar, Euro, AlertTriangle, EyeOff, Eye, Trash2, ExternalLink, Train, MessageSquare, MoreVertical } from 'lucide-react';
+import { Search, MapPin, Clock, Calendar, Euro, AlertTriangle, EyeOff, Eye, Trash2, ExternalLink, Train, MessageSquare, MoreVertical, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { parseTimeToMinutes, getTypeColor, isClosedOnDate, getGoogleMapsUrl } from './utils';
 import { useLanguage } from './i18n';
 
@@ -19,10 +19,10 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
   }, []);
 
   const getSortIcon = (name) => {
-    if (sortConfig.key !== name) return <span className="text-gray-300 dark:text-gray-600 ml-1">↕</span>;
+    if (sortConfig.key !== name) return <ArrowUpDown size={14} className="text-gray-300 dark:text-gray-600 ml-1" />;
     return sortConfig.direction === 'ascending'
-      ? <span className="text-blue-500 ml-1">↑</span>
-      : <span className="text-blue-500 ml-1">↓</span>;
+      ? <ArrowUp size={14} className="text-blue-500 ml-1" />
+      : <ArrowDown size={14} className="text-blue-500 ml-1" />;
   };
 
   const sortedData = React.useMemo(() => {
@@ -124,7 +124,7 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                         )}
                         {closed === 'maybe' && (
                           <span title={t('table.checkVenue')}>
-                            <AlertTriangle size={14} className="text-yellow-500" />
+                            <AlertTriangle size={14} className="text-amber-700 dark:text-amber-400" />
                           </span>
                         )}
                       </div>
@@ -133,13 +133,13 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                       <div className="flex items-center gap-2">
                         {item.activity}
                         {item.isCustom && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                          <span className="px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
                             {t('table.custom')}
                           </span>
                         )}
-                        <a href={getGoogleMapsUrl(item.lat, item.lon)} target="_blank" rel="noopener noreferrer"
+                        <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
                           title={t('table.openMaps')} className="text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
-                          <ExternalLink size={13} />
+                          <ExternalLink size={14} />
                         </a>
                       </div>
                     </td>
@@ -168,17 +168,20 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setExpandedNoteId(isExpanded ? null : item.id)}
                           title={item.notes ? t('table.editNote') : t('table.addNote')}
-                          className={`p-1 rounded transition-colors ${item.notes ? 'text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                          aria-label={item.notes ? t('table.editNote') : t('table.addNote')}
+                          className={`p-2 rounded-lg transition-colors ${item.notes ? 'text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                           <MessageSquare size={14} />
                         </button>
                         {item.isCustom ? (
                           <button onClick={() => deleteCustomItem(item.id)} title={t('table.deleteCustom')}
-                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                            aria-label={t('table.deleteCustom')}
+                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                             <Trash2 size={14} />
                           </button>
                         ) : (
                           <button onClick={() => toggleHidden(item.id)} title={isHidden ? t('table.unhide') : t('table.hide')}
-                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            aria-label={isHidden ? t('table.unhide') : t('table.hide')}
+                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
                           </button>
                         )}
@@ -235,7 +238,7 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                       {item.activity}
                     </span>
                     {item.isCustom && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                      <span className="px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
                         {t('table.custom')}
                       </span>
                     )}
@@ -257,7 +260,7 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                       )}
                       {closed === 'maybe' && (
                         <span title={t('table.checkVenue')}>
-                          <AlertTriangle size={13} className="text-yellow-500" />
+                          <AlertTriangle size={13} className="text-amber-700 dark:text-amber-400" />
                         </span>
                       )}
                     </div>
@@ -273,11 +276,13 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                 {/* Kebab menu */}
                 <div className="relative shrink-0" ref={isMenuOpen ? menuRef : null}>
                   <button onClick={() => setOpenMenuId(isMenuOpen ? null : item.id)}
-                    className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    aria-label={t('table.actions')}
+                    aria-expanded={isMenuOpen}
+                    className="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <MoreVertical size={16} />
                   </button>
                   {isMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[180px] py-1 overflow-hidden">
+                    <div role="menu" className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[180px] py-1 overflow-hidden">
                       {/* Notes */}
                       <button onClick={() => { setExpandedNoteId(isExpanded ? null : item.id); setOpenMenuId(null); }}
                         className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
@@ -285,7 +290,7 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
                         {item.notes ? t('table.editNote') : t('table.addNote')}
                       </button>
                       {/* Maps */}
-                      <a href={getGoogleMapsUrl(item.lat, item.lon)} target="_blank" rel="noopener noreferrer"
+                      <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
                         onClick={() => setOpenMenuId(null)}
                         className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
                         <ExternalLink size={14} className="text-gray-400" />
@@ -329,7 +334,11 @@ export default function TableView({ items, sortConfig, requestSort, toggleComple
       </div>
 
       {filteredData.length === 0 && (
-        <div className="p-12 text-center text-gray-500 dark:text-gray-400">{t('table.noResults')}</div>
+        <div className="text-center py-16">
+          <Search size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <h3 className="text-base font-semibold text-gray-600 dark:text-gray-300 mb-1">{t('table.noResultsTitle')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('table.noResultsDesc')}</p>
+        </div>
       )}
     </>
   );
