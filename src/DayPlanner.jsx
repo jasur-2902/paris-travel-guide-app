@@ -225,7 +225,7 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                 }`}>
                   {/* Day header */}
                   <div
-                    className={`px-5 py-3 flex items-center justify-between cursor-pointer transition-colors ${
+                    className={`px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 cursor-pointer transition-colors ${
                       hasWarnings ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100/70 dark:hover:bg-red-900/30' : isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                     onClick={() => setSelectedDate(date)}
@@ -242,7 +242,7 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-3 sm:gap-4 text-xs text-gray-500 dark:text-gray-400 ml-5 sm:ml-0">
                       <span className="flex items-center gap-1"><Euro size={13} /> {'\u20AC'}{totalCost.toFixed(2)}</span>
                       <span className="flex items-center gap-1"><Clock size={13} /> ~{totalTransit} min</span>
                       <span>{dayItems.filter(i => i.completed).length}/{dayItems.length} {t('planner.done')}</span>
@@ -372,25 +372,31 @@ export default function DayPlanner({ items, allItems, toggleComplete, updateDate
                 </div>
                 <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                   {unscheduled.map(item => (
-                    <li key={item.id} className={`px-5 py-3 flex items-center gap-3 ${item.hidden ? 'opacity-50 bg-gray-50/80 dark:bg-gray-800/50' : ''}`}>
-                      <input type="checkbox" checked={item.completed} onChange={() => toggleComplete(item.id)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer shrink-0" />
-                      <span className={`flex-1 text-sm flex items-center gap-1.5 ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
-                        {item.activity}
-                        <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
-                          title={t('table.openMaps')} className="text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors inline-flex">
-                          <ExternalLink size={12} />
-                        </a>
-                        {item.isCustom && (
-                          <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">{t('table.custom')}</span>
-                        )}
-                      </span>
-                      {item.metro && <span className="text-xs text-indigo-400 dark:text-indigo-300 flex items-center gap-0.5"><Train size={11} /> {item.metro}</span>}
-                      <span className="text-xs text-gray-400 dark:text-gray-500">{item.price}</span>
-                      <ActionButton item={item} />
-                      <input type="date"
-                        value="" onChange={(e) => updateDate(item.id, e.target.value)}
-                        className="border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-400 bg-white dark:bg-gray-700 dark:text-gray-200" />
+                    <li key={item.id} className={`px-5 py-3 ${item.hidden ? 'opacity-50 bg-gray-50/80 dark:bg-gray-800/50' : ''}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <input type="checkbox" checked={item.completed} onChange={() => toggleComplete(item.id)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer shrink-0" />
+                          <span className={`text-sm flex items-center gap-1.5 min-w-0 ${item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
+                            <span className="truncate">{item.activity}</span>
+                            <a href={getGoogleMapsUrl(item.lat, item.lon, item.activity)} target="_blank" rel="noopener noreferrer"
+                              title={t('table.openMaps')} className="text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors inline-flex shrink-0">
+                              <ExternalLink size={12} />
+                            </a>
+                            {item.isCustom && (
+                              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 shrink-0">{t('table.custom')}</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-3 ml-6 sm:ml-0">
+                          {item.metro && <span className="text-xs text-indigo-400 dark:text-indigo-300 flex items-center gap-0.5 shrink-0"><Train size={11} /> {item.metro}</span>}
+                          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{item.price}</span>
+                          <ActionButton item={item} />
+                          <input type="date"
+                            value="" onChange={(e) => updateDate(item.id, e.target.value)}
+                            className="w-[120px] sm:w-auto border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-400 bg-white dark:bg-gray-700 dark:text-gray-200" />
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>

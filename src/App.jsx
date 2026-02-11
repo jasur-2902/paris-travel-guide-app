@@ -71,28 +71,47 @@ function WeatherSkeleton() {
 
 function WeatherPill({ weather, locale, t, onDayClick }) {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setExpanded(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const dates = Object.keys(weather).sort();
-  if (dates.length === 0) return null;
+  const allDates = Object.keys(weather).sort();
+  if (allDates.length === 0) return null;
 
-  // Compute week summary: average of all highs/lows, most common icon
-  const allHighs = dates.map(d => weather[d].high);
-  const allLows = dates.map(d => weather[d].low);
-  const minLow = Math.round(Math.min(...allLows));
-  const maxHigh = Math.round(Math.max(...allHighs));
+  const today = new Date().toISOString().split('T')[0];
 
-  // Most common weather icon
+  // Focused 8-day window: 3 past + today + 4 future
+  const todayIdx = allDates.indexOf(today);
+  let windowDates;
+  if (todayIdx === -1) {
+    // today not in data — show first 8
+    windowDates = allDates.slice(0, 8);
+  } else {
+    const start = Math.max(0, todayIdx - 3);
+    windowDates = allDates.slice(start, start + 8);
+  }
+
+  const displayDates = expanded ? allDates : windowDates;
+
+  // Pill summary uses the 8-day window
+  const windowHighs = windowDates.map(d => weather[d].high);
+  const windowLows = windowDates.map(d => weather[d].low);
+  const minLow = Math.round(Math.min(...windowLows));
+  const maxHigh = Math.round(Math.max(...windowHighs));
+
+  // Most common weather icon in window
   const iconCounts = {};
-  dates.forEach(d => {
+  windowDates.forEach(d => {
     const info = getWeatherInfo(weather[d].code);
     iconCounts[info.icon] = (iconCounts[info.icon] || 0) + 1;
   });
@@ -111,24 +130,25 @@ function WeatherPill({ weather, locale, t, onDayClick }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 min-w-[280px] sm:min-w-[320px]">
+        <div className={`absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 max-w-[calc(100vw-2rem)] ${expanded ? 'min-w-[280px] sm:min-w-[320px]' : 'min-w-[280px] sm:min-w-[460px]'}`}>
           <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">{t('weather.forecast')}</div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
-            {dates.map(date => {
+          <div className={`grid ${expanded ? 'gap-1.5 grid-cols-3 sm:grid-cols-4 md:grid-cols-5' : 'gap-2 sm:gap-3 grid-cols-4 sm:grid-cols-8'}`}>
+            {displayDates.map(date => {
               const w = weather[date];
               const info = getWeatherInfo(w.code);
               const Icon = WEATHER_ICONS[info.icon] || Cloud;
               const d = new Date(date + 'T12:00:00');
               const dayLabel = d.toLocaleDateString(locale, { weekday: 'short' });
               const dayNum = d.getDate();
+              const isToday = date === today;
               return (
                 <button
                   key={date}
-                  onClick={() => { onDayClick(date); setOpen(false); }}
-                  className="flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors group"
+                  onClick={() => { onDayClick(date); setOpen(false); setExpanded(false); }}
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-2.5 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors group ${isToday ? 'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/40' : ''}`}
                   title={t(info.labelKey)}
                 >
-                  <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{dayLabel}</span>
+                  <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{isToday ? t('weather.today') : dayLabel}</span>
                   <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{dayNum}</span>
                   <Icon size={20} className="text-sky-600 dark:text-sky-400 my-0.5" />
                   <span className="text-[11px] font-semibold text-gray-800 dark:text-gray-100">{Math.round(w.high)}°</span>
@@ -137,6 +157,15 @@ function WeatherPill({ weather, locale, t, onDayClick }) {
               );
             })}
           </div>
+          {allDates.length > 8 && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              className="flex items-center justify-center gap-1 w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+            >
+              <span>{expanded ? t('weather.showLess') : t('weather.showAll')}</span>
+              <ChevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -572,7 +601,7 @@ export default function App() {
                   : 'border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
               }`}>
               {isSimple ? <ToggleLeft size={15} /> : <ToggleRight size={15} />}
-              <span className="hidden sm:inline">{isSimple ? t('view.simple') : t('view.full')}</span>
+              <span>{isSimple ? t('view.simple') : t('view.full')}</span>
             </button>
             {/* Dark mode toggle */}
             <button onClick={() => setDarkMode(d => !d)} title={t('dark.toggle')} aria-label={t('dark.toggle')}
@@ -582,7 +611,7 @@ export default function App() {
                   : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}>
               {darkMode ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
-              <span className="hidden sm:inline">{darkMode ? t('dark.dark') : t('dark.light')}</span>
+              <span>{darkMode ? t('dark.dark') : t('dark.light')}</span>
             </button>
             {/* Settings menu */}
             <SettingsMenu
@@ -607,13 +636,13 @@ export default function App() {
         {/* Tabs + content */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
-            <div className="flex flex-1">
+            <div className="flex flex-1 min-w-0">
               {TABS.map(tab => {
                 const Icon = tab.icon;
                 const active = activeTab === tab.id;
                 return (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 sm:px-5 py-3 text-sm font-medium transition-colors ${
                       active ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}>
                     <Icon size={16} />
@@ -622,18 +651,22 @@ export default function App() {
                 );
               })}
             </div>
-            <div className="flex items-center gap-2 mr-2">
+            <div className="flex items-center gap-2 mr-2 shrink-0">
               {!isSimple && hiddenCount > 0 && (
                 <button onClick={() => setShowHidden(h => !h)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  title={`${t('hidden.count', { count: hiddenCount })} — ${showHidden ? t('hidden.hide') : t('hidden.show')}`}
+                  aria-label={`${t('hidden.count', { count: hiddenCount })} — ${showHidden ? t('hidden.hide') : t('hidden.show')}`}
+                  className="hidden min-[376px]:flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   {showHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                  {t('hidden.count', { count: hiddenCount })}
-                  <span className="font-medium">— {showHidden ? t('hidden.hide') : t('hidden.show')}</span>
+                  <span>{hiddenCount}</span>
+                  <span className="hidden sm:inline font-medium">— {showHidden ? t('hidden.hide') : t('hidden.show')}</span>
                 </button>
               )}
               <button onClick={() => setShowAddModal(true)}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0">
-                <Plus size={15} /> {t('header.addActivity')}
+                title={t('header.addActivity')}
+                aria-label={t('header.addActivity')}
+                className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0">
+                <Plus size={15} /> <span className="hidden sm:inline">{t('header.addActivity')}</span>
               </button>
             </div>
           </div>
@@ -678,13 +711,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Mobile FAB — Add Activity */}
-      <button onClick={() => setShowAddModal(true)}
-        className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors active:scale-95"
-        title={t('header.addActivity')}
-        aria-label={t('header.addActivity')}>
-        <Plus size={24} />
-      </button>
 
       {showAddModal && (
         <AddActivityModal onAdd={addCustomItem} onClose={() => setShowAddModal(false)} />
@@ -703,7 +729,7 @@ function SettingsMenu({ settingsRef, showSettings, setShowSettings, exportToCSV,
         <Settings size={15} />
       </button>
       {showSettings && (
-        <div role="menu" className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[240px] py-1">
+        <div role="menu" className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[200px] sm:min-w-[240px] max-w-[calc(100vw-2rem)] py-1">
           {/* Language */}
           <div className="px-3 py-2.5 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.language')}</span>

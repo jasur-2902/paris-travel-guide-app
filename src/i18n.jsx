@@ -185,6 +185,9 @@ const translations = {
     'weather.thunderstorm': 'Thunderstorm',
     'weather.thunderstormHail': 'Thunderstorm w/ hail',
     'weather.unknown': 'Unknown',
+    'weather.today': 'Today',
+    'weather.showAll': 'Show all',
+    'weather.showLess': 'Show less',
   },
   es: {
     'header.title': 'Planificador de Viaje a París',
@@ -349,6 +352,9 @@ const translations = {
     'weather.thunderstorm': 'Tormenta',
     'weather.thunderstormHail': 'Tormenta con granizo',
     'weather.unknown': 'Desconocido',
+    'weather.today': 'Hoy',
+    'weather.showAll': 'Ver todo',
+    'weather.showLess': 'Ver menos',
   },
   fr: {
     'header.title': 'Planificateur de Voyage à Paris',
@@ -513,6 +519,9 @@ const translations = {
     'weather.thunderstorm': 'Orage',
     'weather.thunderstormHail': 'Orage avec grêle',
     'weather.unknown': 'Inconnu',
+    'weather.today': 'Aujourd\'hui',
+    'weather.showAll': 'Voir tout',
+    'weather.showLess': 'Voir moins',
   },
 };
 
