@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
-import { getMarkerColor, getGoogleMapsUrl } from './utils';
+import { getMarkerColor, getGoogleMapsUrl, DAY_COLORS } from './utils';
+import { useLanguage } from './i18n';
 
 function createIcon(color) {
   return L.divIcon({
@@ -23,40 +24,62 @@ const homeIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
-export default function MapView({ items, userLocation }) {
-  // Filter out Normandy (too far to show on Paris map) for center calculation
-  const parisItems = items.filter(i => i.lat > 48 && i.lat < 49.1);
+export default function MapView({ items, userLocation, darkMode }) {
+  const { t } = useLanguage();
 
   const center = useMemo(() => {
     if (userLocation) return [userLocation.lat, userLocation.lon];
-    return [48.8606, 2.3376]; // Default: central Paris
+    return [48.8606, 2.3376];
   }, [userLocation]);
+
+  const dayRoutes = useMemo(() => {
+    const byDate = {};
+    items.forEach(item => {
+      if (item.plannedDate && !item.completed) {
+        if (!byDate[item.plannedDate]) byDate[item.plannedDate] = [];
+        byDate[item.plannedDate].push(item);
+      }
+    });
+    const sortedDates = Object.keys(byDate).sort();
+    return sortedDates
+      .filter(date => byDate[date].length >= 2)
+      .map((date, idx) => ({
+        date,
+        color: DAY_COLORS[idx % DAY_COLORS.length],
+        positions: byDate[date]
+          .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+          .map(i => [i.lat, i.lon]),
+      }));
+  }, [items]);
+
+  const tileUrl = darkMode
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const tileAttribution = darkMode
+    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
   return (
     <div className="h-[500px] w-full">
       <MapContainer center={center} zoom={13} className="h-full w-full rounded-b-xl z-0">
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key={darkMode ? 'dark' : 'light'}
+          attribution={tileAttribution}
+          url={tileUrl}
         />
 
-        {/* User base location */}
+        {dayRoutes.map(route => (
+          <Polyline key={route.date} positions={route.positions} color={route.color} weight={3} opacity={0.5} dashArray="8 4" />
+        ))}
+
         {userLocation && (
           <Marker position={[userLocation.lat, userLocation.lon]} icon={homeIcon}>
-            <Popup>
-              <strong>Your base</strong><br />
-              {userLocation.address}
-            </Popup>
+            <Popup><strong>{t('map.yourBase')}</strong><br />{userLocation.address}</Popup>
           </Marker>
         )}
 
-        {/* Activity markers */}
         {items.map(item => (
-          <Marker
-            key={item.id}
-            position={[item.lat, item.lon]}
-            icon={createIcon(getMarkerColor(item.type, item.completed))}
-          >
+          <Marker key={item.id} position={[item.lat, item.lon]} icon={createIcon(getMarkerColor(item.type, item.completed))}>
             <Popup>
               <div className="text-sm min-w-[180px]">
                 <strong>{item.activity}</strong>
@@ -66,11 +89,12 @@ export default function MapView({ items, userLocation }) {
                   <div>{item.hours}</div>
                   <div>{item.price} · {item.time}</div>
                   <div>{item.location}</div>
-                  {item.plannedDate && <div className="font-medium text-blue-600 mt-1">Planned: {item.plannedDate}</div>}
-                  {item.completed && <div className="font-medium text-green-600">Done ✓</div>}
+                  {item.metro && <div style={{ color: '#6366f1', fontWeight: 500 }}>{item.metro}</div>}
+                  {item.plannedDate && <div className="font-medium text-blue-600 mt-1">{t('map.planned')}: {item.plannedDate}</div>}
+                  {item.completed && <div className="font-medium text-green-600">{t('map.done')} ✓</div>}
                   <a href={getGoogleMapsUrl(item.lat, item.lon)} target="_blank" rel="noopener noreferrer"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
-                    Open in Google Maps &#x2197;
+                    {t('map.openMaps')} ↗
                   </a>
                 </div>
               </div>
@@ -79,13 +103,13 @@ export default function MapView({ items, userLocation }) {
         ))}
       </MapContainer>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 text-xs text-gray-500 bg-gray-50 rounded-b-xl border-t border-gray-200">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Indoor</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Outdoor</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> Mix</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> Done</span>
-        {userLocation && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Your base</span>}
+      <div className="flex items-center gap-4 px-4 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-b-xl border-t border-gray-200 dark:border-gray-700">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> {t('map.indoor')}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span> {t('map.outdoor')}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> {t('map.mix')}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-400 inline-block"></span> {t('map.done')}</span>
+        {userLocation && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> {t('map.yourBase')}</span>}
+        {dayRoutes.length > 0 && <span className="text-gray-400 dark:text-gray-500 ml-2">{t('map.dayRoutes')}</span>}
       </div>
     </div>
   );

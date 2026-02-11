@@ -14,8 +14,8 @@ export default defineConfig({
         theme_color: '#3b82f6',
         background_color: '#f9fafb',
         display: 'standalone',
-        start_url: '/paris-navigate-app/',
-        scope: '/paris-navigate-app/',
+        start_url: '/paris-travel-guide-app/',
+        scope: '/paris-travel-guide-app/',
         icons: [
           {
             src: 'favicon.svg',
@@ -48,5 +48,5 @@ export default defineConfig({
       },
     }),
   ],
-  base: '/paris-navigate-app/',
+  base: '/paris-travel-guide-app/',
 })

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, MapPin, X, Loader2, LocateFixed, AlertCircle, CheckCircle2, Table, CalendarDays, Map, Plus, Eye, EyeOff } from 'lucide-react';
-import { STORAGE_KEY, initialData, isInFrance, formatDuration, formatAddress } from './utils';
+import { Download, MapPin, X, Loader2, LocateFixed, AlertCircle, CheckCircle2, Table, CalendarDays, Map, Plus, Eye, EyeOff, Sun as SunIcon, Moon, Globe, Cloud, CloudSun, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog, ChevronDown, Settings, ToggleLeft, ToggleRight } from 'lucide-react';
+import { STORAGE_KEY, initialData, isInFrance, formatAddress, getWeatherInfo, estimateHybridTransit } from './utils';
+import { useLanguage, SUPPORTED_LANGUAGES } from './i18n';
 import TableView from './TableView';
 import DayPlanner from './DayPlanner';
 import MapView from './MapView';
@@ -22,18 +23,22 @@ function loadSavedData() {
 function loadState() {
   const saved = loadSavedData();
   const presetItems = initialData.map(item => {
-    if (!saved?.items) return { ...item, completed: false, plannedDate: '', hidden: false };
+    if (!saved?.items) return { ...item, completed: false, plannedDate: '', hidden: false, notes: '', sortOrder: 0 };
     const s = saved.items.find(i => i.id === item.id);
-    if (!s) return { ...item, completed: false, plannedDate: '', hidden: false };
+    if (!s) return { ...item, completed: false, plannedDate: '', hidden: false, notes: '', sortOrder: 0 };
     return {
       ...item,
       completed: s.completed || false,
       plannedDate: s.plannedDate || '',
       hidden: s.hidden || false,
+      notes: s.notes || '',
+      sortOrder: s.sortOrder || 0,
       ...(s.time ? { time: s.time } : {}),
+      ...(s.transitMethod ? { transitMethod: s.transitMethod } : {}),
+      ...(s.timeBreakdown ? { timeBreakdown: s.timeBreakdown } : {}),
     };
   });
-  const customItems = saved?.customItems || [];
+  const customItems = (saved?.customItems || []).map(i => ({ ...i, notes: i.notes || '', sortOrder: i.sortOrder || 0 }));
   return [...presetItems, ...customItems];
 }
 
@@ -42,7 +47,7 @@ function Notification({ notification, onDismiss }) {
   const isError = notification.type === 'error';
   return (
     <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm mb-4 ${
-      isError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+      isError ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800' : 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
     }`}>
       {isError ? <AlertCircle size={16} className="shrink-0" /> : <CheckCircle2 size={16} className="shrink-0" />}
       <span className="flex-1">{notification.message}</span>
@@ -51,20 +56,108 @@ function Notification({ notification, onDismiss }) {
   );
 }
 
-const TABS = [
-  { id: 'table', label: 'Table', icon: Table },
-  { id: 'planner', label: 'Day Planner', icon: CalendarDays },
-  { id: 'map', label: 'Map', icon: Map },
-];
+const WEATHER_ICONS = { Sun: SunIcon, CloudSun, Cloud, CloudRain, CloudSnow, CloudDrizzle, CloudLightning, CloudFog };
+
+function WeatherPill({ weather, locale, t, onDayClick }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const dates = Object.keys(weather).sort();
+  if (dates.length === 0) return null;
+
+  // Compute week summary: average of all highs/lows, most common icon
+  const allHighs = dates.map(d => weather[d].high);
+  const allLows = dates.map(d => weather[d].low);
+  const minLow = Math.round(Math.min(...allLows));
+  const maxHigh = Math.round(Math.max(...allHighs));
+
+  // Most common weather icon
+  const iconCounts = {};
+  dates.forEach(d => {
+    const info = getWeatherInfo(weather[d].code);
+    iconCounts[info.icon] = (iconCounts[info.icon] || 0) + 1;
+  });
+  const topIcon = Object.entries(iconCounts).sort((a, b) => b[1] - a[1])[0][0];
+  const PillIcon = WEATHER_ICONS[topIcon] || Cloud;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 px-3 py-1.5 mr-2 text-xs rounded-full border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors"
+      >
+        <PillIcon size={15} />
+        <span className="font-semibold">{minLow}° — {maxHigh}°C</span>
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 min-w-[320px]">
+          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">{t('weather.forecast')}</div>
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+            {dates.map(date => {
+              const w = weather[date];
+              const info = getWeatherInfo(w.code);
+              const Icon = WEATHER_ICONS[info.icon] || Cloud;
+              const d = new Date(date + 'T12:00:00');
+              const dayLabel = d.toLocaleDateString(locale, { weekday: 'short' });
+              const dayNum = d.getDate();
+              return (
+                <button
+                  key={date}
+                  onClick={() => { onDayClick(date); setOpen(false); }}
+                  className="flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors group"
+                  title={t(info.labelKey)}
+                >
+                  <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{dayLabel}</span>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{dayNum}</span>
+                  <Icon size={20} className="text-sky-600 dark:text-sky-400 my-0.5" />
+                  <span className="text-[11px] font-semibold text-gray-800 dark:text-gray-100">{Math.round(w.high)}°</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{Math.round(w.low)}°</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
+  const { t, locale } = useLanguage();
   const saved = loadSavedData();
   const [items, setItems] = useState(loadState);
   const [userLocation, setUserLocation] = useState(() => saved?.location || null);
   const [addressQuery, setAddressQuery] = useState(() => saved?.location?.address || '');
   const [sortConfig, setSortConfig] = useState(() => saved?.sortConfig || { key: null, direction: 'ascending' });
-  const [activeTab, setActiveTab] = useState(() => saved?.activeTab || 'table');
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const sv = localStorage.getItem('paris-trip-view');
+      if (sv) return sv;
+      if (localStorage.getItem(STORAGE_KEY)) return 'full';
+      return 'simple';
+    } catch { return 'simple'; }
+  });
+  const [activeTab, setActiveTab] = useState(() => {
+    if (saved?.activeTab) return saved.activeTab;
+    const sv = localStorage.getItem('paris-trip-view');
+    if (!sv || sv === 'simple') return 'planner';
+    return 'table';
+  });
   const [budget, setBudget] = useState(() => saved?.budget || 0);
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('paris-trip-dark') === 'true'; } catch { return false; }
+  });
+  const [weather, setWeather] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -72,14 +165,96 @@ export default function App() {
   const [notification, setNotification] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const dropdownRef = useRef(null);
+  const settingsRef = useRef(null);
   const notificationTimer = useRef(null);
   const itemsRef = useRef(items);
 
-  // Keep ref in sync
   useEffect(() => { itemsRef.current = items; }, [items]);
 
   const hiddenCount = items.filter(i => i.hidden).length;
+  const isSimple = viewMode === 'simple';
+
+  // Persist view mode
+  useEffect(() => {
+    try { localStorage.setItem('paris-trip-view', viewMode); } catch {}
+  }, [viewMode]);
+
+  // Click outside settings menu
+  useEffect(() => {
+    const handler = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) setShowSettings(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Dark mode
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    try { localStorage.setItem('paris-trip-dark', String(darkMode)); } catch {}
+  }, [darkMode]);
+
+  // Weather fetch — next 16 days forecast + last 14 days archive
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchWeather() {
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const forecastEnd = new Date(now.getTime() + 15 * 86400000).toISOString().split('T')[0];
+      const archiveStart = new Date(now.getTime() - 14 * 86400000).toISOString().split('T')[0];
+      const yesterday = new Date(now.getTime() - 86400000).toISOString().split('T')[0];
+      const weatherMap = {};
+
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Paris&start_date=${today}&end_date=${forecastEnd}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && data.daily) {
+            data.daily.time.forEach((date, idx) => {
+              weatherMap[date] = {
+                code: data.daily.weather_code[idx],
+                high: data.daily.temperature_2m_max[idx],
+                low: data.daily.temperature_2m_min[idx],
+              };
+            });
+          }
+        }
+      } catch {}
+
+      try {
+        const res = await fetch(
+          `https://archive-api.open-meteo.com/v1/archive?latitude=48.8566&longitude=2.3522&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Paris&start_date=${archiveStart}&end_date=${yesterday}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && data.daily) {
+            data.daily.time.forEach((date, idx) => {
+              if (!weatherMap[date]) {
+                weatherMap[date] = {
+                  code: data.daily.weather_code[idx],
+                  high: data.daily.temperature_2m_max[idx],
+                  low: data.daily.temperature_2m_min[idx],
+                };
+              }
+            });
+          }
+        }
+      } catch {}
+
+      if (!cancelled) setWeather(weatherMap);
+    }
+    fetchWeather();
+    return () => { cancelled = true; };
+  }, []);
 
   const showNotification = useCallback((type, message, duration = 5000) => {
     clearTimeout(notificationTimer.current);
@@ -92,11 +267,10 @@ export default function App() {
     setNotification(null);
   }, []);
 
-  // Persist to localStorage
   useEffect(() => {
     const presetDiffs = items
       .filter(i => !i.isCustom)
-      .map(({ id, completed, plannedDate, time, hidden }) => ({ id, completed, plannedDate, time, hidden }));
+      .map(({ id, completed, plannedDate, time, hidden, notes, sortOrder, transitMethod, timeBreakdown }) => ({ id, completed, plannedDate, time, hidden, notes, sortOrder, transitMethod, timeBreakdown }));
     const customItems = items.filter(i => i.isCustom);
     const toSave = {
       items: presetDiffs,
@@ -109,7 +283,6 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   }, [items, userLocation, sortConfig, activeTab, budget]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowSuggestions(false);
@@ -118,7 +291,6 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Debounced address search — France only
   useEffect(() => {
     if (addressQuery.length < 3 || userLocation?.address === addressQuery) {
       setSuggestions([]);
@@ -143,35 +315,50 @@ export default function App() {
     setIsCalculating(true);
     try {
       const currentItems = itemsRef.current;
-      const coordPairs = [`${lon},${lat}`, ...currentItems.map(d => `${d.lon},${d.lat}`)];
-      const res = await fetch(
-        `https://router.project-osrm.org/table/v1/driving/${coordPairs.join(';')}?sources=0&annotations=duration`
-      );
-      if (!res.ok) throw new Error(`Route server returned ${res.status}`);
-      const data = await res.json();
-      if (data.code !== 'Ok') throw new Error(data.message || `Route calculation failed: ${data.code}`);
-      const durations = data.durations?.[0];
-      if (!durations || durations.length < currentItems.length + 1) throw new Error('Incomplete response');
-      // Build a map of item id -> duration
-      const durationMap = {};
-      currentItems.forEach((item, index) => {
-        durationMap[item.id] = durations[index + 1];
-      });
-      setItems(prev => prev.map(item => ({
-        ...item,
-        time: durationMap[item.id] != null ? formatDuration(durationMap[item.id]) : item.time,
-      })));
-      showNotification('success', 'Transit times updated for your location.');
+
+      // Phase 1: OSRM walking times (non-fatal if fails)
+      let osrmDurations = null;
+      try {
+        const coordPairs = [`${lon},${lat}`, ...currentItems.map(d => `${d.lon},${d.lat}`)];
+        const res = await fetch(
+          `https://router.project-osrm.org/table/v1/foot/${coordPairs.join(';')}?sources=0&annotations=duration`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.code === 'Ok' && data.durations?.[0]) {
+            osrmDurations = {};
+            currentItems.forEach((item, idx) => {
+              osrmDurations[item.id] = data.durations[0][idx + 1];
+            });
+          }
+        }
+      } catch {} // OSRM failure is non-fatal
+
+      // Phase 2: Hybrid estimation for each item
+      setItems(prev => prev.map(item => {
+        const osrmSec = osrmDurations?.[item.id] ?? null;
+        const result = estimateHybridTransit(lat, lon, item.lat, item.lon, osrmSec);
+
+        // Day trips: keep original default time
+        if (result.method === 'daytrip') {
+          const original = initialData.find(d => d.id === item.id);
+          return { ...item, time: original?.time || item.time, transitMethod: 'daytrip', timeBreakdown: null };
+        }
+
+        return { ...item, time: result.formatted, transitMethod: result.method, timeBreakdown: result.breakdown };
+      }));
+
+      showNotification('success', t('notify.transitUpdated'));
     } catch (e) {
-      showNotification('error', `Could not calculate transit times: ${e.message}. Default times are shown.`);
+      showNotification('error', t('notify.transitError', { error: e.message }));
     } finally {
       setIsCalculating(false);
     }
-  }, [showNotification]);
+  }, [showNotification, t]);
 
   const selectAddress = async (feature) => {
     const [lon, lat] = feature.geometry.coordinates;
-    if (!isInFrance(lat, lon)) { showNotification('error', 'Please select an address in France.'); return; }
+    if (!isInFrance(lat, lon)) { showNotification('error', t('notify.selectFrance')); return; }
     const address = formatAddress(feature.properties);
     setUserLocation({ address, lat, lon });
     setAddressQuery(address);
@@ -186,13 +373,13 @@ export default function App() {
     setSuggestions([]);
     setItems(prev => prev.map(item => {
       const original = initialData.find(d => d.id === item.id);
-      return { ...item, time: original ? original.time : item.isCustom ? 'N/A' : item.time };
+      return { ...item, time: original ? original.time : item.isCustom ? 'N/A' : item.time, transitMethod: null, timeBreakdown: null };
     }));
     dismissNotification();
   };
 
   const useMyLocation = async () => {
-    if (!navigator.geolocation) { showNotification('error', 'Geolocation is not supported by your browser.'); return; }
+    if (!navigator.geolocation) { showNotification('error', t('notify.geoNotSupported')); return; }
     setIsCalculating(true);
     try {
       const pos = await new Promise((resolve, reject) =>
@@ -200,7 +387,7 @@ export default function App() {
       );
       const { latitude: lat, longitude: lon } = pos.coords;
       if (!isInFrance(lat, lon)) {
-        showNotification('error', 'Your current location is outside France. Please enter a French address manually.');
+        showNotification('error', t('notify.outsideFrance'));
         setIsCalculating(false);
         return;
       }
@@ -220,37 +407,24 @@ export default function App() {
     } catch (e) {
       setIsCalculating(false);
       const msgs = {
-        1: 'Location access denied. Please allow location access in your browser settings.',
-        2: 'Could not determine your location. Please enter an address manually.',
-        3: 'Location request timed out. Please try again or enter an address manually.',
+        1: t('notify.locationDenied'),
+        2: t('notify.locationUnavailable'),
+        3: t('notify.locationTimeout'),
       };
-      showNotification('error', msgs[e.code] || 'Could not get your location. Please enter an address manually.');
+      showNotification('error', msgs[e.code] || t('notify.locationError'));
     }
   };
 
-  const toggleComplete = (id) => {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, completed: !item.completed } : item));
-  };
-
-  const updateDate = (id, newDate) => {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, plannedDate: newDate } : item));
-  };
-
-  const toggleHidden = (id) => {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, hidden: !item.hidden } : item));
-  };
-
+  const toggleComplete = (id) => setItems(prev => prev.map(item => item.id === id ? { ...item, completed: !item.completed } : item));
+  const updateDate = (id, newDate) => setItems(prev => prev.map(item => item.id === id ? { ...item, plannedDate: newDate } : item));
+  const updateNotes = (id, notes) => setItems(prev => prev.map(item => item.id === id ? { ...item, notes } : item));
+  const toggleHidden = (id) => setItems(prev => prev.map(item => item.id === id ? { ...item, hidden: !item.hidden } : item));
   const addCustomItem = (item) => {
-    setItems(prev => [...prev, item]);
-    // If we have a user location, recalculate transit times to include the new item
-    if (userLocation) {
-      setTimeout(() => calculateTransitTimes(userLocation.lat, userLocation.lon), 100);
-    }
+    setItems(prev => [...prev, { ...item, notes: '', sortOrder: 0 }]);
+    if (userLocation) setTimeout(() => calculateTransitTimes(userLocation.lat, userLocation.lon), 100);
   };
-
-  const deleteCustomItem = (id) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-  };
+  const deleteCustomItem = (id) => setItems(prev => prev.filter(item => item.id !== id));
+  const reorderItems = (updatedItems) => setItems(updatedItems);
 
   const requestSort = (key) => {
     setSortConfig(prev => ({
@@ -260,13 +434,14 @@ export default function App() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Status", "Planned Date", "Activity", "Type", "Days Open", "Hours", "Price", "Est. Transit", "Location"];
+    const headers = [t('csv.status'), t('csv.plannedDate'), t('table.activity'), t('table.type'), t('csv.daysOpen'), t('table.hours'), t('table.price'), t('csv.transit'), t('csv.location'), t('table.metro'), t('csv.notes')];
     const csvRows = [headers.join(',')];
-    const visibleItems = items.filter(i => !i.hidden);
-    visibleItems.forEach(row => {
+    const vis = items.filter(i => !i.hidden);
+    vis.forEach(row => {
       csvRows.push([
-        `"${row.completed ? 'Done' : 'To Do'}"`, `"${row.plannedDate}"`, `"${row.activity}"`,
-        `"${row.type}"`, `"${row.days}"`, `"${row.hours}"`, `"${row.price}"`, `"${row.time}"`, `"${row.location}"`
+        `"${row.completed ? t('csv.done') : t('csv.toDo')}"`, `"${row.plannedDate}"`, `"${row.activity}"`,
+        `"${row.type}"`, `"${row.days}"`, `"${row.hours}"`, `"${row.price}"`, `"${row.time}"`,
+        `"${row.location}"`, `"${row.metro || ''}"`, `"${(row.notes || '').replace(/"/g, '""')}"`
       ].join(','));
     });
     const link = document.createElement('a');
@@ -277,71 +452,98 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  // Filter items for child components
   const visibleItems = showHidden ? items : items.filter(i => !i.hidden);
 
+  const TABS = [
+    { id: 'table', label: t('tabs.table'), icon: Table },
+    { id: 'planner', label: t('tabs.itinerary'), icon: CalendarDays },
+    { id: 'map', label: t('tabs.map'), icon: Map },
+  ];
+
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen font-sans">
+    <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen font-sans transition-colors">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-800">Paris Trip Planner: February 2026</h1>
-            <div className="relative mt-2" ref={dropdownRef}>
-              <div className="flex items-center gap-2">
-                <MapPin size={16} className="text-gray-400 shrink-0" />
-                <div className="relative flex-1 max-w-md">
-                  <input type="text" placeholder="Enter your base address in France..."
-                    value={addressQuery}
-                    onChange={(e) => { setAddressQuery(e.target.value); setShowSuggestions(true); }}
-                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                    className="w-full text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
-                  {userLocation && (
-                    <button onClick={resetLocation} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      <X size={14} />
-                    </button>
-                  )}
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('header.title')}</h1>
+            {(!isSimple || showLocationInput) && (
+              <div className="relative mt-2" ref={dropdownRef}>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 max-w-md">
+                    <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                    <input type="text" placeholder={t('header.addressPlaceholder')}
+                      value={addressQuery}
+                      onChange={(e) => { setAddressQuery(e.target.value); setShowSuggestions(true); }}
+                      onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                      className="w-full text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg pl-9 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-800" />
+                    {userLocation && (
+                      <button onClick={() => { resetLocation(); if (isSimple) setShowLocationInput(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <button onClick={useMyLocation} disabled={isCalculating} title={t('header.useMyLocation')}
+                    className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-lg px-2 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors shrink-0 disabled:opacity-50">
+                    <LocateFixed size={14} />
+                    <span className="hidden sm:inline">{t('header.myLocation')}</span>
+                  </button>
+                  {isCalculating && <Loader2 size={16} className="text-blue-500 animate-spin shrink-0" />}
                 </div>
-                <button onClick={useMyLocation} disabled={isCalculating} title="Use my current location"
-                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-2 py-1.5 hover:bg-blue-50 transition-colors shrink-0 disabled:opacity-50">
-                  <LocateFixed size={14} />
-                  <span className="hidden sm:inline">My location</span>
-                </button>
-                {isCalculating && <Loader2 size={16} className="text-blue-500 animate-spin shrink-0" />}
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="absolute left-0 right-0 mt-1 max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 overflow-hidden">
+                    {suggestions.map((s, i) => (
+                      <li key={i} onClick={() => { selectAddress(s); if (isSimple) setShowLocationInput(false); }}
+                        className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0">
+                        <div className="font-medium">{s.properties.name || s.properties.street}</div>
+                        <div className="text-xs text-gray-400">{formatAddress(s.properties)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="absolute left-6 right-0 mt-1 max-w-md bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                  {suggestions.map((s, i) => (
-                    <li key={i} onClick={() => selectAddress(s)}
-                      className="px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0">
-                      <div className="font-medium">{s.properties.name || s.properties.street}</div>
-                      <div className="text-xs text-gray-400">{formatAddress(s.properties)}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <button onClick={() => setViewMode(v => v === 'simple' ? 'full' : 'simple')} title={t('view.toggle')}
+              className={`flex items-center gap-1.5 text-xs border rounded-lg px-2.5 py-1.5 transition-colors ${
+                isSimple
+                  ? 'text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+              }`}>
+              {isSimple ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
+              <span className="hidden sm:inline">{isSimple ? t('view.simple') : t('view.full')}</span>
+            </button>
+            {/* Add Activity — desktop only */}
             <button onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-colors shrink-0">
-              <Plus size={18} /> Add Activity
+              className="hidden md:flex items-center gap-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow transition-colors shrink-0">
+              <Plus size={18} /> <span className="hidden sm:inline">{t('header.addActivity')}</span>
             </button>
-            <button onClick={exportToCSV}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition-colors shrink-0">
-              <Download size={18} /> Export CSV
-            </button>
+            {/* Settings menu */}
+            <SettingsMenu
+              settingsRef={settingsRef}
+              showSettings={showSettings}
+              setShowSettings={setShowSettings}
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+              exportToCSV={exportToCSV}
+              showHidden={showHidden}
+              setShowHidden={setShowHidden}
+              hiddenCount={hiddenCount}
+              isSimple={isSimple}
+              onSetBaseLocation={() => { setShowLocationInput(true); setShowSettings(false); }}
+              t={t}
+            />
           </div>
         </div>
 
         <Notification notification={notification} onDismiss={dismissNotification} />
-
-        {/* Budget tracker */}
-        <BudgetTracker items={items.filter(i => !i.hidden)} budget={budget} onBudgetChange={setBudget} />
+        {!isSimple && <BudgetTracker items={items.filter(i => !i.hidden)} budget={budget} onBudgetChange={setBudget} />}
 
         {/* Tabs + content */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="flex items-center border-b border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-1">
               {TABS.map(tab => {
                 const Icon = tab.icon;
@@ -349,7 +551,7 @@ export default function App() {
                 return (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium transition-colors ${
-                      active ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      active ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}>
                     <Icon size={16} />
                     {tab.label}
@@ -357,41 +559,129 @@ export default function App() {
                 );
               })}
             </div>
-            {hiddenCount > 0 && (
-              <button onClick={() => setShowHidden(h => !h)}
-                className="flex items-center gap-1.5 px-4 py-2 mr-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                {showHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                {hiddenCount} hidden
-                <span className="font-medium">{showHidden ? '— Hide' : '— Show'}</span>
-              </button>
-            )}
+            <div className="flex items-center">
+              {!isSimple && <WeatherPill weather={weather} locale={locale} t={t} onDayClick={(date) => { setActiveTab('planner'); }} />}
+              {!isSimple && hiddenCount > 0 && (
+                <button onClick={() => setShowHidden(h => !h)}
+                  className="flex items-center gap-1.5 px-4 py-2 mr-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  {showHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                  {t('hidden.count', { count: hiddenCount })}
+                  <span className="font-medium">— {showHidden ? t('hidden.hide') : t('hidden.show')}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {activeTab === 'table' && (
             <TableView items={visibleItems} sortConfig={sortConfig} requestSort={requestSort}
-              toggleComplete={toggleComplete} updateDate={updateDate}
+              toggleComplete={toggleComplete} updateDate={updateDate} updateNotes={updateNotes}
               searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-              toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden} />
+              toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden}
+              simpleView={isSimple} />
           )}
           {activeTab === 'planner' && (
-            <DayPlanner items={visibleItems} toggleComplete={toggleComplete} updateDate={updateDate}
-              toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden} />
+            <DayPlanner items={visibleItems} allItems={items} toggleComplete={toggleComplete} updateDate={updateDate} updateNotes={updateNotes}
+              toggleHidden={toggleHidden} deleteCustomItem={deleteCustomItem} showHidden={showHidden}
+              reorderItems={reorderItems} userLocation={userLocation} weather={weather} darkMode={darkMode} />
           )}
           {activeTab === 'map' && (
-            <MapView items={visibleItems} userLocation={userLocation} />
+            <MapView items={visibleItems} userLocation={userLocation} darkMode={darkMode} />
           )}
         </div>
 
-        <div className="mt-4 text-xs text-gray-400 text-center">
+        <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
           {userLocation
-            ? `*Estimated driving times from ${userLocation.address}.`
-            : '*Enter your base address above to calculate transit times.'}
+            ? t('footer.transitFrom', { address: userLocation.address })
+            : t('footer.enterAddress')}
         </div>
       </div>
+
+      {/* Mobile FAB — Add Activity */}
+      <button onClick={() => setShowAddModal(true)}
+        className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors active:scale-95"
+        title={t('header.addActivity')}>
+        <Plus size={24} />
+      </button>
 
       {showAddModal && (
         <AddActivityModal onAdd={addCustomItem} onClose={() => setShowAddModal(false)} />
       )}
+    </div>
+  );
+}
+
+function SettingsMenu({ settingsRef, showSettings, setShowSettings, darkMode, setDarkMode, exportToCSV, showHidden, setShowHidden, hiddenCount, isSimple, onSetBaseLocation, t }) {
+  return (
+    <div ref={settingsRef} className="relative">
+      <button onClick={() => setShowSettings(s => !s)} title={t('settings.title')}
+        className="flex items-center justify-center w-9 h-9 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300">
+        <Settings size={18} />
+      </button>
+      {showSettings && (
+        <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl min-w-[240px] py-1">
+          {/* Language */}
+          <div className="px-3 py-2.5 flex items-center justify-between">
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.language')}</span>
+            <LanguageSelector />
+          </div>
+          <div className="border-t border-gray-100 dark:border-gray-700" />
+          {/* Dark mode */}
+          <button onClick={() => setDarkMode(d => !d)}
+            className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.darkMode')}</span>
+            <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+              {darkMode ? <SunIcon size={14} className="text-yellow-400" /> : <Moon size={14} />}
+              {darkMode ? t('dark.light') : t('dark.dark')}
+            </span>
+          </button>
+          {/* Set location (simple view only) */}
+          {isSimple && (
+            <>
+              <div className="border-t border-gray-100 dark:border-gray-700" />
+              <button onClick={onSetBaseLocation}
+                className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
+                <MapPin size={14} className="text-gray-400" />
+                {t('settings.setLocation')}
+              </button>
+            </>
+          )}
+          {/* Hidden items */}
+          {hiddenCount > 0 && (
+            <>
+              <div className="border-t border-gray-100 dark:border-gray-700" />
+              <button onClick={() => setShowHidden(h => !h)}
+                className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  {showHidden ? t('hidden.hide') : t('hidden.show')} ({hiddenCount})
+                </span>
+                {showHidden ? <Eye size={14} className="text-gray-400" /> : <EyeOff size={14} className="text-gray-400" />}
+              </button>
+            </>
+          )}
+          <div className="border-t border-gray-100 dark:border-gray-700" />
+          {/* Export CSV */}
+          <button onClick={() => { exportToCSV(); setShowSettings(false); }}
+            className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300">
+            <Download size={14} className="text-gray-400" />
+            {t('header.exportCsv')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LanguageSelector() {
+  const { lang, changeLang } = useLanguage();
+  return (
+    <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800">
+      <Globe size={14} className="text-gray-500 dark:text-gray-400" />
+      <select value={lang} onChange={(e) => changeLang(e.target.value)}
+        className="text-xs bg-transparent border-none focus:outline-none cursor-pointer text-gray-600 dark:text-gray-300">
+        {SUPPORTED_LANGUAGES.map(l => (
+          <option key={l.code} value={l.code}>{l.flag}</option>
+        ))}
+      </select>
     </div>
   );
 }
